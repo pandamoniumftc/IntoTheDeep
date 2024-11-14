@@ -9,6 +9,6 @@ public class Analog {
     }
 
     public double getVoltage() {
-        return hub.getBulkData().getAnalogInput(port);
+        return hub.bulkData.getAnalogInput(port);
     }
 }

@@ -4,9 +4,9 @@ import com.arcrobotics.ftclib.command.InstantCommand;
 import org.firstinspires.ftc.teamcode.Robots.HuaHua;
 
 public class HorizontalSlidesCommand extends InstantCommand {
-    public HorizontalSlidesCommand(HuaHua robot, double targetPosition) {
+    public HorizontalSlidesCommand(HuaHua robot, double inches) {
         super(
-                () -> robot.intake.hSlideM.setPosition(targetPosition)
+                () -> robot.intake.slideM.setPosition(inches)
         );
     }
 }

@@ -13,9 +13,9 @@ public class RetractIntakeCommand extends SequentialCommandGroup {
     public RetractIntakeCommand(HuaHua robot) {
         super(
                 new IntakeArmCommand(robot, Intake.ArmState.TRANSFERING),
-                new InstantCommand(() -> robot.intake.resetClawRotation())
-                //new WaitCommand(500),
-                //new HorizontalSlidesCommand(robot, 0)
+                new InstantCommand(() -> robot.intake.resetClawRotation()),
+                new WaitCommand(500),
+                new HorizontalSlidesCommand(robot, 0)
         );
     }
 }

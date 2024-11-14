@@ -8,9 +8,8 @@ import org.firstinspires.ftc.teamcode.Devices.Encoder;
 import org.firstinspires.ftc.teamcode.Devices.Motor;
 import org.firstinspires.ftc.teamcode.Devices.Servo;
 import org.firstinspires.ftc.teamcode.Robots.HuaHua;
-import org.firstinspires.ftc.teamcode.Util.Controllers.PID;
-import org.firstinspires.ftc.teamcode.Util.profile.MotionProfile;
-import org.firstinspires.ftc.teamcode.Util.profile.ProfileConstraints;
+import org.firstinspires.ftc.teamcode.Util.PID;
+import org.firstinspires.ftc.teamcode.Util.MotionProfile;
 
 import java.io.IOException;
 
@@ -43,8 +42,8 @@ public class Outtake extends AbstractSubsystem {
         this.robot = (HuaHua) robot;
 
         encoder = this.robot.controlHub.getEncoder(Math.abs(lsm), ticksPerRev);
-        controller = new PID(1, 0, 0, 0);
-        profile = new MotionProfile(0, 0, new ProfileConstraints(1, 1));
+        controller = new PID(1, 0, 0);
+        //profile = new MotionProfile(0, 0, new ProfileConstraints(1, 1));
 
         leftMotor = this.robot.controlHub.getMotor(Math.abs(lsm), encoder, controller, profile, ticksToDistance);
         rightMotor = this.robot.controlHub.getMotor(Math.abs(rsm), encoder, controller, profile, ticksToDistance);

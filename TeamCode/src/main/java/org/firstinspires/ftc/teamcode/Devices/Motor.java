@@ -1,118 +1,114 @@
 package org.firstinspires.ftc.teamcode.Devices;
 
-import com.qualcomm.robotcore.hardware.DcMotor;
+import static java.lang.Math.signum;
 
-import org.firstinspires.ftc.teamcode.Util.Controllers.PID;
-import org.firstinspires.ftc.teamcode.Util.profile.MotionProfile;
-import org.firstinspires.ftc.teamcode.Util.profile.ProfileConstraints;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.util.ElapsedTime;
+
+import org.firstinspires.ftc.teamcode.Util.PID;
+import org.firstinspires.ftc.teamcode.Util.MotionProfile;
+
+import java.util.concurrent.TimeUnit;
 
 public class Motor {
     RevHub hub;
     int port;
     int sign = 1;
-    private double initial, target;
-    Encoder encoder;
-    PID controller;
-    MotionProfile profile;
-    double lastPos, power, scale;
-    boolean controllerEnabled = true, profileEnabled = true;
+    public double initial, target;
+    public Encoder encoder;
+    public PID controller;
+    public MotionProfile profile;
+    public double power, scale, voltage = 12.0;
+    public boolean controllerEnabled = true, profileEnabled = true;
+    ElapsedTime profileTimer;
     public Motor(RevHub hub, int port) {
         this.hub = hub;
         this.port = port;
-    }
-    public Motor(RevHub hub, int port, Encoder encoder, PID controller) {
-        this.hub = hub;
-        this.port = port;
-        this.encoder = encoder;
-        this.controller = controller;
-    }
 
-    public Motor(RevHub hub, int port, Encoder encoder, PID controller, MotionProfile profile) {
-        this.hub = hub;
-        this.port = port;
-        this.encoder = encoder;
-        this.controller = controller;
-        this.profile = profile;
-    }
+        switch ((int) signum(port)) {
+            case -1:
+            case 1:
+                sign = (int) signum(port);
+                break;
+            case 0:
+                sign = 1;
+                break;
+            default:
+                sign = -1;
+                break;
+        }
 
-    public Motor(RevHub hub, int port, Encoder encoder, PID controller, double scale) {
-        this.hub = hub;
-        this.port = port;
-        this.encoder = encoder;
-        this.controller = controller;
-        this.scale = scale;
+        controllerEnabled = false;
+        profileEnabled = false;
     }
-
     public Motor(RevHub hub, int port, Encoder encoder, PID controller, MotionProfile profile, double scale) {
         this.hub = hub;
         this.port = port;
         this.encoder = encoder;
         this.controller = controller;
         this.profile = profile;
+        this.profile.velo *= scale;
+        this.profile.accel *= scale;
         this.scale = scale;
+
+        switch ((int) signum(port)) {
+            case -1:
+            case 1:
+                sign = (int) signum(port);
+                break;
+            case 0:
+                sign = 1;
+                break;
+            default:
+                sign = -1;
+                break;
+        }
+        profileTimer = new ElapsedTime();
     }
 
     public void update() {
-        if (controller != null && controllerEnabled) {
+        if (controllerEnabled) {
             if (profileEnabled) {
-                profile.update();
-                setPower(controller.update(encoder.getEncoderPosition(),profile.getState().position));
+                setPower(controller.update(encoder.getRotation(),encoder.getVelocity(),profile.calculate(profileTimer.time(TimeUnit.SECONDS))));
             }
             else {
-                setPower(controller.update(encoder.getEncoderPosition(),target+initial));
+                setPower(controller.update(encoder.getRotation(),encoder.getVelocity(),target+initial));
             }
-
-            lastPos = getPosition();
-        }
-    }
-
-    public void enableController(boolean enable) {
-        if (controller != null) {
-            if (!controllerEnabled && enable) {
-                controller.reInit();
-            }
-            controllerEnabled = enable;
-        }
-    }
-
-    public void enableProfile(boolean enable) {
-        if (profile != null) {
-            profileEnabled = enable;
         }
     }
 
     public void setPower(double power) {
         this.power = power * sign;
-        hub.setMotorPower(this.power, port);
+        hub.setMotorPower(this.power * (12.0 / voltage), port);
     }
 
     public void setPosition(double pos) {
-        boolean setPointChanged = (target != pos * scale);
+        boolean setPointChanged = target != (pos * scale);
         target = pos * scale;
 
         if (profileEnabled && setPointChanged) {
-            setProfile(getPosition(), target+initial, new ProfileConstraints(profile.getAccelMax(), profile.getVeloMax()));
+            double velo = profile.velo;
+            double accel = profile.accel;
+            profile = new MotionProfile(encoder.getRotation(), target+initial, velo, accel);
+            profileTimer.reset();
         }
     }
     public void setInitialPosition() {
-        initial = getPosition();
+        initial = encoder.getRotation();
     }
     public double getPosition() {
-        return encoder.getEncoderPosition();
+        return (encoder.getRotation() - initial)/scale;
     }
     public double getVelocity() {
-        return encoder.getEncoderVelocity();
+        return encoder.getVelocity()/scale;
     }
     public boolean reachedPosition(double epsilon) {
-        return Math.abs(target - (encoder.getEncoderPosition() - initial)) < epsilon;
+        return Math.abs(target - (encoder.getRotation() - initial)) < epsilon;
     }
-    public void setDirection(int sign) {
-        this.sign = (sign == 1 || sign == -1) ? sign : this.sign;
+    public void setVoltage(double volt) {
+        voltage = volt;
     }
-    public void setProfile(double pos, double target, ProfileConstraints constraints) {
-        this.profile = new MotionProfile(pos, target, constraints);
-    }
-    public void setZeroPowerBehavior(DcMotor.ZeroPowerBehavior behavior) {
-        hub.setMotorZeroPowerBehavior(behavior, port);
+    public void setRunModes(DcMotor.RunMode mode, DcMotor.ZeroPowerBehavior behavior) {
+        hub.setMotorRunMode(port, mode, behavior);
     }
 }

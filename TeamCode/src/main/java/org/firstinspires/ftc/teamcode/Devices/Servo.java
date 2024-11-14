@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.Devices;
 
-import org.firstinspires.ftc.teamcode.Util.profile.MotionProfile;
-import org.firstinspires.ftc.teamcode.Util.profile.ProfileConstraints;
+import com.qualcomm.hardware.lynx.commands.core.LynxSetServoEnableCommand;
 
 import java.util.ArrayList;
 
@@ -17,18 +16,16 @@ public class Servo {
         preset = new ArrayList<>();
     }
     public void setPosition(double pos) {
+        boolean setPointChanged = this.pos != pos;
         this.pos = pos;
-        hub.setServoPosition(port, pos);
-        if (!enable) {
-            enable(true);
+        if (setPointChanged) {
+            hub.setServoPosition(port, pos);
         }
-    }
-    public double getPosition() {
-        return pos;
-    }
-    public void enable(boolean enable) {
-        hub.enableServoPWM(port, enable);
-        this.enable = enable;
+        if (!enable) {
+            LynxSetServoEnableCommand command = new LynxSetServoEnableCommand(hub.module, port, true);
+            hub.send(command);
+            this.enable = true;
+        }
     }
     public void addPresetPosition(double pos) {
         preset.add(pos);

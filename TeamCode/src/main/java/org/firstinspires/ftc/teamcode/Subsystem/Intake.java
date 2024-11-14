@@ -4,25 +4,23 @@ import static com.qualcomm.robotcore.util.Range.clip;
 import static java.lang.Math.signum;
 import static java.lang.Math.abs;
 
+import com.qualcomm.robotcore.hardware.DcMotor;
+
 import org.firstinspires.ftc.teamcode.AbstractClasses.AbstractRobot;
 import org.firstinspires.ftc.teamcode.AbstractClasses.AbstractSubsystem;
 import org.firstinspires.ftc.teamcode.Devices.Analog;
-import org.firstinspires.ftc.teamcode.Devices.Encoder;
 import org.firstinspires.ftc.teamcode.Devices.Motor;
 import org.firstinspires.ftc.teamcode.Devices.Servo;
 import org.firstinspires.ftc.teamcode.Robots.Globals;
 import org.firstinspires.ftc.teamcode.Robots.HuaHua;
-import org.firstinspires.ftc.teamcode.Util.Controllers.PID;
-import org.firstinspires.ftc.teamcode.Util.profile.MotionProfile;
+import org.firstinspires.ftc.teamcode.Util.PID;
+import org.firstinspires.ftc.teamcode.Util.MotionProfile;
 
 import java.io.IOException;
 
 public class Intake extends AbstractSubsystem {
     HuaHua robot;
-    public Motor hSlideM;
-    Encoder slideEnc;
-    PID controller;
-    MotionProfile profile;
+    public Motor slideM;
     Servo clawS, rotateS, lWristS, rWristS, lElbowS, rElbowS;
     Analog lEnc, rEnc;
     double elbowAngle;
@@ -40,52 +38,59 @@ public class Intake extends AbstractSubsystem {
             this.index = i;
         }
     }
-
     public ClawState clawState;
     public ArmState armState;
-    final double ticksToDistance = 2.5;
+    final double InchesToRadians = 0.919327459151/8.0;
     double clawPos = 0.49;
-    int slidePos = 0;
+    double slidePos = 2;
+    private final double VMAX = 4.0, AMAX = 3.0;
     public Intake(AbstractRobot robot, int hsm, int se, int cs, int rs, int lws, int rws, int les, int res, int lE, int rE) {
         super(robot);
         this.robot = (HuaHua) robot;
 
-        // init motor, servos, and enc
-        //slideEnc = this.robot.controlHub.getEncoder(se, 4096);
-        //controller = new PID(1, 0, 0, 0);
-        //profile = new MotionProfile(0, 0, new ProfileConstraints(1, 1, 1));
-        //hSlideM = this.robot.controlHub.getMotor(abs(hsm), slideEnc, controller, profile, ticksToDistance);
+        // init motor and servos
+        slideM = this.robot.expansionHub.getMotor(
+                abs(hsm),
+                this.robot.expansionHub.getEncoder(abs(se), 751.8),
+                new PID(0.3, 0.4, 0),
+                new MotionProfile(0, 0, VMAX, AMAX),
+                InchesToRadians
+        );
+        slideM.setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE);
+        slideM.setVoltage(robot.controlHub.getVoltage());
 
-        clawS = this.robot.controlHub.getServo(cs);
-        rotateS = this.robot.controlHub.getServo(rs);
-        lWristS = this.robot.controlHub.getServo(lws);
-        rWristS = this.robot.controlHub.getServo(rws);
-        lElbowS = this.robot.controlHub.getServo(les);
-        rElbowS = this.robot.controlHub.getServo(res);
+        clawS = this.robot.expansionHub.getServo(cs);
+        rotateS = this.robot.expansionHub.getServo(rs);
+        lWristS = this.robot.expansionHub.getServo(lws);
+        rWristS = this.robot.expansionHub.getServo(rws);
+        lElbowS = this.robot.expansionHub.getServo(les);
+        rElbowS = this.robot.expansionHub.getServo(res);
         //lEnc = this.robot.controlHub.getAnalog(lE);
         //rEnc = this.robot.controlHub.getAnalog(rE);
 
-        //hSlideM.setDirection((int) signum(hsm));
+        lElbowS.addPresetPosition(0.52, 0); //+2
+        rElbowS.addPresetPosition(0.62, 0); //-2
+        lWristS.addPresetPosition(0.28, 0); //+6
+        rWristS.addPresetPosition(0.69, 0); //-6
 
-        lElbowS.addPresetPosition(0.48, 0);
-        rElbowS.addPresetPosition(0.66, 0);
-        lElbowS.addPresetPosition(0.46, 1); // -3
-        rElbowS.addPresetPosition(0.68, 1);
-        lElbowS.addPresetPosition(0.25, 2); // -21
-        rElbowS.addPresetPosition(0.87, 2);
-        lWristS.addPresetPosition(0.22, 0);
-        rWristS.addPresetPosition(0.75, 0);
-        lWristS.addPresetPosition(0.20, 1);
-        rWristS.addPresetPosition(0.77, 1);
-        lWristS.addPresetPosition(0.94, 2);
-        rWristS.addPresetPosition(0.03, 2);
+        lElbowS.addPresetPosition(0.48, 1); //46
+        rElbowS.addPresetPosition(0.66, 1); //68
+        lWristS.addPresetPosition(0.24, 1); //+4
+        rWristS.addPresetPosition(0.73, 1); //-4
+
+        lElbowS.addPresetPosition(0.21, 2); //-4
+        rElbowS.addPresetPosition(0.91, 2); //+4
+        lWristS.addPresetPosition(0.90, 2); //-4
+        rWristS.addPresetPosition(0.07, 2); //+4
 
         clawState = ClawState.CLOSED;
         armState = ArmState.TRANSFERING;
+
     }
 
     @Override
     public void init() throws IOException {
+        slideM.setInitialPosition();
     }
 
     @Override
@@ -95,12 +100,20 @@ public class Intake extends AbstractSubsystem {
 
     @Override
     public void driverLoop() {
-        //hSlideM.update();
+        slideM.setVoltage(robot.controlHub.getVoltage());
+        if (armState == ArmState.TRANSFERING) {
+            slideM.update();
+        }
+        else {
+
+        }
+
         if (Globals.opMode == Globals.RobotOpMode.TELEOP) {
             robot.telemetry.addData("arm state", armState);
-            robot.telemetry.addData("arm state", armState);
-            robot.telemetry.addData("arm state", armState);
-            robot.telemetry.update();
+            robot.telemetry.addData("current : target", slideM.encoder.getRotation() + " " + (slideM.target + slideM.initial));
+            robot.telemetry.addData("init : target", slideM.profile.initialPosition + " " + slideM.profile.finalPosition);
+            robot.telemetry.addData("power", slideM.power);
+            robot.telemetry.addData("slide", slidePos);
         }
     }
 
@@ -126,15 +139,15 @@ public class Intake extends AbstractSubsystem {
     }
     public void rotateClaw(double lTrigger, double rTrigger) {
         clawPos += 5E-4 * (-lTrigger + rTrigger);
-        clawPos = clip(clawPos, 0.42, 0.55);
+        clawPos = clip(clawPos, 0.43, 0.54);
         rotateS.setPosition(clawPos);
     }
     public void resetClawRotation() {
-        rotateS.setPosition(0.42);
+        rotateS.setPosition(0.43);
     }
     public void moveSlides(double jInput) {
-        slidePos += 1 * (jInput);
-        slidePos = clip(slidePos, 0, 35);
-        hSlideM.setPosition(slidePos);
+        slidePos += jInput * 0.25;
+        slidePos = clip(slidePos, 2, 8);
+        slideM.setPosition(slidePos);
     }
 }

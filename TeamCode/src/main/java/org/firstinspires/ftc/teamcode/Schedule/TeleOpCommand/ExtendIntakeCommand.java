@@ -14,8 +14,8 @@ import org.firstinspires.ftc.teamcode.Subsystem.Intake;
 public class ExtendIntakeCommand extends SequentialCommandGroup {
     public ExtendIntakeCommand(HuaHua robot) {
         super(
-                //new HorizontalSlidesCommand(robot, 200),
-                //new WaitCommand(500),
+                new HorizontalSlidesCommand(robot, 2),
+                new WaitCommand(500),
                 new IntakeArmCommand(robot, Intake.ArmState.INTAKING)
         );
     }

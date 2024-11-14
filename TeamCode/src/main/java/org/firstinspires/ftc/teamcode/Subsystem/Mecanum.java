@@ -25,15 +25,10 @@ public class Mecanum extends AbstractSubsystem {
         super(robot);
         this.robot = (HuaHua) robot;
 
-        this.frm = this.robot.controlHub.getMotor(abs(frm));
-        this.flm = this.robot.controlHub.getMotor(abs(flm));
-        this.brm = this.robot.controlHub.getMotor(abs(brm));
-        this.blm = this.robot.controlHub.getMotor(abs(blm));
-
-        this.frm.setDirection((int) signum(frm));
-        this.flm.setDirection((int) signum(flm));
-        this.brm.setDirection((int) signum(brm));
-        this.blm.setDirection((int) signum(blm));
+        this.frm = this.robot.controlHub.getMotor(frm);
+        this.flm = this.robot.controlHub.getMotor(flm);
+        this.brm = this.robot.controlHub.getMotor(brm);
+        this.blm = this.robot.controlHub.getMotor(blm);
     }
 
     @Override
@@ -50,8 +45,7 @@ public class Mecanum extends AbstractSubsystem {
     public void driverLoop() {
         setDrivePower();
 
-        //robot.telemetry.addData("angle", robot.imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES));
-        robot.telemetry.update();
+        //robot.telemetry.addData("angle", robot.getAngle());
     }
 
     @Override
@@ -66,27 +60,17 @@ public class Mecanum extends AbstractSubsystem {
         brm.setPower(power[3]);
     }
 
-    public void calculatePower(Pose p, double angle) {
-        p.rotate(angle, new Pose(0, 0, 0));
+    public void moveRobot(Pose p, double angle) {
+        p.rotate(angle);
 
         p.x = clip(p.x, -1, 1);
         p.y = clip(p.y, -1, 1);
         p.r = clip(p.r, -1, 1);
 
-        power[0] = (-p.y+p.x+p.r); // flm
-        power[1] = (-p.y-p.x-p.r); // frm
-        power[2] = (-p.y-p.x+p.r); // blm
-        power[3] = (-p.y+p.x-p.r); // brm
-
-        double voltCorrection;
-        if (Globals.opMode == Globals.RobotOpMode.AUTO) {
-            voltCorrection = 12.0 / ((double) robot.controlHub.getVoltage() / 1000);
-            for (int i = 0; i < power.length; i++) {
-                power[i] = (abs(power[i]) < 0.01) ?
-                        power[i] * voltCorrection :
-                        (power[i] + signum(power[i]) * 0.085) * voltCorrection;
-            }
-        }
+        power[0] = (p.y+p.x+p.r); // flm
+        power[1] = (p.y-p.x-p.r); // frm
+        power[2] = (p.y-p.x+p.r); // blm
+        power[3] = (p.y+p.x-p.r); // brm
 
         double max = 1.0;
         for (double pow : power) max = Math.max(max, abs(pow));
@@ -97,5 +81,13 @@ public class Mecanum extends AbstractSubsystem {
             power[2] /= max;
             power[3] /= max;
         }
+    }
+
+    public void moveRobot(Pose p) {
+        moveRobot(p, 0);
+    }
+
+    public void stopRobot() {
+        moveRobot(new Pose());
     }
 }

@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.Devices;
 
 import static java.lang.Math.PI;
+import static java.lang.Math.signum;
 
 public class Encoder {
     private RevHub hub;
@@ -13,18 +14,28 @@ public class Encoder {
         this.encTicks = encTicks;
         this.port = port;
 
-        home += getEncoderPosition();
+        switch ((int) signum(port)) {
+            case -1:
+            case 1:
+                direction = (int) signum(port);
+                break;
+            case 0:
+                direction = 1;
+                break;
+            default:
+                direction = -1;
+                break;
+        }
+
+        home += getRotation() * direction;
     }
-    public double getEncoderPosition() {
-        return (2 * PI * getEncoderCount() / encTicks - home) * direction;
+    public double getRotation() {
+        return (2 * PI * hub.bulkData.getEncoder(port) / encTicks - home) * direction;
     }
-    public double getEncoderVelocity() {
-        return (2 * PI * getEncoderVelocity() / encTicks) * direction;
+    public double getVelocity() {
+        return (2 * PI * hub.bulkData.getVelocity(port) / encTicks) * direction;
     }
-    public int getEncoderCount() {
-        return hub.getBulkData().getEncoder(port);
-    }
-    public void setDirection(int direction) {
-            this.direction = (direction == 1 || direction == -1) ? direction : this.direction;
+    public int getCount() {
+        return hub.bulkData.getEncoder(port);
     }
 }

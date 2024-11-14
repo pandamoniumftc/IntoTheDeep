@@ -25,7 +25,6 @@ public abstract class AbstractAutonomous extends AbstractOpMode {
             CommandScheduler.getInstance().schedule(autonomous());
 
             while (!isStopRequested() && opModeIsActive()) {
-                CommandScheduler.getInstance().run();
                 robot.driverLoop();
             }
 

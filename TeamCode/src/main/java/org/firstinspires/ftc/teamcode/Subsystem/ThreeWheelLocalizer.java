@@ -1,23 +1,16 @@
 package org.firstinspires.ftc.teamcode.Subsystem;
 
 import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.normalizeRadians;
-import static java.lang.Math.PI;
 import static java.lang.Math.abs;
-import static java.lang.Math.atan2;
 import static java.lang.Math.cos;
-import static java.lang.Math.hypot;
 import static java.lang.Math.signum;
 import static java.lang.Math.sin;
-
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.AbstractClasses.AbstractLocalizer;
 import org.firstinspires.ftc.teamcode.AbstractClasses.AbstractRobot;
 import org.firstinspires.ftc.teamcode.Devices.Encoder;
 import org.firstinspires.ftc.teamcode.Robots.HuaHua;
 import org.firstinspires.ftc.teamcode.Util.Pose;
-
-import java.util.Timer;
 
 public class ThreeWheelLocalizer extends AbstractLocalizer {
     HuaHua robot;
@@ -27,43 +20,39 @@ public class ThreeWheelLocalizer extends AbstractLocalizer {
     // deadwheel
     private final double ENCODER_WIDTH = 14.0; // distance between parallel deadwheels
     private final double ENCODER_WHEEL_CIRCUMFERENCE = Math.PI * ENCODER_WHEEL_DIAMETER;
-    private Pose positionStamp;
     public ThreeWheelLocalizer(AbstractRobot robot, int right, int left, int front) {
         super(robot);
         this.robot = (HuaHua) robot;
 
-        rightEnc = this.robot.controlHub.getEncoder(abs(right), ENCODER_TICKS_PER_REVOLUTION);
-        leftEnc = this.robot.controlHub.getEncoder(abs(left), ENCODER_TICKS_PER_REVOLUTION);
-        frontEnc = this.robot.controlHub.getEncoder(abs(front), ENCODER_TICKS_PER_REVOLUTION);
-
-        rightEnc.setDirection((int) signum(right));
-        leftEnc.setDirection((int) signum(left));
-        frontEnc.setDirection((int) signum(front));
+        rightEnc = this.robot.controlHub.getEncoder(right, ENCODER_TICKS_PER_REVOLUTION);
+        leftEnc = this.robot.controlHub.getEncoder(left, ENCODER_TICKS_PER_REVOLUTION);
+        frontEnc = this.robot.controlHub.getEncoder(front, ENCODER_TICKS_PER_REVOLUTION);
 
         encoder = new Pose(0, 0, 0);
         position = new Pose(0, 0, 0);
-        positionStamp = new Pose(0, 0, 0);
+        prevEncoder = new Pose(0, 0, 0);
+        prevPosition = new Pose(0, 0, 0);
 
         update();
     }
 
     @Override
     public void update() {
-        encoder.setPose(new Pose(rightEnc.getEncoderCount(), leftEnc.getEncoderCount(), frontEnc.getEncoderCount()));
+        encoder.setPose(new Pose(rightEnc.getCount(), leftEnc.getCount(), frontEnc.getCount()));
 
-        position.setPose(combineSteps(position, convertTicksToDistance(new Pose(encoder.x - encoder.px,encoder.y - encoder.py,encoder.r - encoder.pr))));
+        position.setPose(combineSteps(position, convertTicksToDistance(new Pose(encoder.x - prevEncoder.x,encoder.y - prevEncoder.y,encoder.r - prevEncoder.r))));
 
-        velocity = convertTicksToDistance(new Pose(rightEnc.getEncoderVelocity(), leftEnc.getEncoderVelocity(), frontEnc.getEncoderVelocity()));
+        velocity = convertTicksToDistance(new Pose(rightEnc.getVelocity(), leftEnc.getVelocity(), frontEnc.getVelocity()));
 
-        position.setPrevPose(position);
-        encoder.setPrevPose(encoder);
+        prevPosition.setPose(position);
+        prevEncoder.setPose(encoder);
     }
 
     @Override
     public void reset() {
-        encoder.setPrevPose(new Pose(rightEnc.getEncoderCount(), leftEnc.getEncoderCount(), frontEnc.getEncoderCount()));
+        prevEncoder.setPose(new Pose(rightEnc.getCount(), leftEnc.getCount(), frontEnc.getCount()));
         position.setPose(new Pose(0,0,0));
-        position.setPrevPose(new Pose(0,0,0));
+        prevPosition.setPose(new Pose(0,0,0));
     }
 
     public Pose convertTicksToDistance(Pose p) {
@@ -87,11 +76,5 @@ public class ThreeWheelLocalizer extends AbstractLocalizer {
         double cos = cos(avgHeadingRadians);
         double sin = sin(avgHeadingRadians);
         return new Pose(pos.x + (step.x * sin + step.y * cos), pos.y + (-step.x * cos + step.y * sin), normalizeRadians(position.r + step.r));
-    }
-    public void stampPosition() {
-        positionStamp = position;
-    }
-    public double calculateDisplacement() {
-        return hypot(position.x - positionStamp.x, position.y - positionStamp.y);
     }
 }

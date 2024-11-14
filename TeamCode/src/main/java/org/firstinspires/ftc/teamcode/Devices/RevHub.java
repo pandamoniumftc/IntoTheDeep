@@ -1,120 +1,119 @@
 package org.firstinspires.ftc.teamcode.Devices;
 
 import static com.qualcomm.robotcore.util.Range.clip;
-import static com.qualcomm.robotcore.util.Range.scale;
+
+import static java.lang.Math.abs;
 
 import com.qualcomm.hardware.lynx.LynxCommExceptionHandler;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.lynx.LynxNackException;
 import com.qualcomm.hardware.lynx.commands.LynxMessage;
 import com.qualcomm.hardware.lynx.commands.LynxRespondable;
-import com.qualcomm.hardware.lynx.commands.core.LynxGetADCCommand;
-import com.qualcomm.hardware.lynx.commands.core.LynxGetADCResponse;
+import com.qualcomm.hardware.lynx.commands.core.LynxDekaInterfaceCommand;
 import com.qualcomm.hardware.lynx.commands.core.LynxGetBulkInputDataCommand;
 import com.qualcomm.hardware.lynx.commands.core.LynxGetBulkInputDataResponse;
+import com.qualcomm.hardware.lynx.commands.core.LynxI2cConfigureChannelCommand;
 import com.qualcomm.hardware.lynx.commands.core.LynxSetMotorChannelModeCommand;
 import com.qualcomm.hardware.lynx.commands.core.LynxSetMotorConstantPowerCommand;
 import com.qualcomm.hardware.lynx.commands.core.LynxSetServoConfigurationCommand;
-import com.qualcomm.hardware.lynx.commands.core.LynxSetServoEnableCommand;
 import com.qualcomm.hardware.lynx.commands.core.LynxSetServoPulseWidthCommand;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.PwmControl;
 import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
 import com.qualcomm.robotcore.hardware.usb.RobotArmingStateNotifier;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.teamcode.Util.Controllers.PID;
-import org.firstinspires.ftc.teamcode.Util.profile.MotionProfile;
+import org.firstinspires.ftc.robotcore.external.navigation.VoltageUnit;
+import org.firstinspires.ftc.teamcode.Util.PID;
+import org.firstinspires.ftc.teamcode.Util.MotionProfile;
+
+import java.util.concurrent.TimeUnit;
 
 public class RevHub extends LynxCommExceptionHandler implements RobotArmingStateNotifier.Callback {
-    public LynxModule revHub;
+    public LynxModule module;
+    LynxGetBulkInputDataResponse bulkData;
+    double voltage = 12.0;
     public boolean armed = false;
+    ElapsedTime voltageTimer;
     @Override
     public void onModuleStateChange(RobotArmingStateNotifier module, RobotArmingStateNotifier.ARMINGSTATE state) {
         armed = module.getArmingState() == RobotArmingStateNotifier.ARMINGSTATE.ARMED;
     }
     public RevHub(HardwareMap hardwareMap, String revhub) {
-        revHub = hardwareMap.get(LynxModule.class, revhub);
+        module = hardwareMap.get(LynxModule.class, revhub);
+        module.registerCallback(this, true);
+        clearBulkData();
+        updateBulkData();
+
+        voltageTimer = new ElapsedTime();
+    }
+    public void setBulkCachingMode(LynxModule.BulkCachingMode mode) {
+        module.setBulkCachingMode(mode);
+    }
+    public void setIC2Speed(LynxI2cConfigureChannelCommand.SpeedCode code) {
+        for (int i = 0; i < LynxConstants.NUMBER_OF_I2C_BUSSES; i++) {
+            setIC2Speed(i, code);
+        }
+    }
+    public void setIC2Speed(int port, LynxI2cConfigureChannelCommand.SpeedCode code) {
+        send(new LynxI2cConfigureChannelCommand(module, port, code));
     }
     public Motor getMotor(int port) {
-        return new Motor(this, port);
-    }
-    public Motor getMotor(int port, Encoder enc, PID controller) {
-        return new Motor(this, port, enc, controller);
-    }
-    public Motor getMotor(int port, Encoder enc, PID controller, MotionProfile profile) {
-        return new Motor(this, port, enc, controller, profile);
-    }
-    public Motor getMotor(int port, Encoder enc, PID controller, double scale) {
-        return new Motor(this, port, enc, controller, scale);
+        return new Motor(this, abs(port));
     }
     public Motor getMotor(int port, Encoder enc, PID controller, MotionProfile profile, double scale) {
-        return new Motor(this, port, enc, controller, profile, scale);
+        return new Motor(this, abs(port), enc, controller, profile, scale);
     }
-    public Encoder getEncoder(int port, int counts) {
-        return new Encoder(this, port, counts);
+    public Encoder getEncoder(int port, double counts) {
+        return new Encoder(this, abs(port), counts);
     }
-
     public Servo getServo(int port) {
-        setServoPWM(port);
+        LynxSetServoConfigurationCommand cmd = new LynxSetServoConfigurationCommand(this.module,port,(int)PwmControl.PwmRange.usFrameDefault);
+        send(cmd);
         return new Servo(this, port);
     }
     public void setMotorPower(double power, int port) {
         LynxConstants.validateMotorZ(port);
         int p = (int)(Range.scale(Range.clip(power,-1.0,1.0), -1.0, 1.0, LynxSetMotorConstantPowerCommand.apiPowerFirst, LynxSetMotorConstantPowerCommand.apiPowerLast));
-        LynxSetMotorConstantPowerCommand command = new LynxSetMotorConstantPowerCommand(revHub, port, p);
+        LynxSetMotorConstantPowerCommand command = new LynxSetMotorConstantPowerCommand(module, port, p);
         send(command);
     }
-
-    public void setMotorZeroPowerBehavior(DcMotor.ZeroPowerBehavior behavior, int port) {
-        LynxConstants.validateMotorZ(port);
-        send(new LynxSetMotorChannelModeCommand(this.revHub, port, DcMotor.RunMode.RUN_WITHOUT_ENCODER, behavior));
-    }
-
-    private static final int firstServo = LynxConstants.INITIAL_SERVO_PORT;
-    private static final int lastServo = firstServo + LynxConstants.NUMBER_OF_SERVO_CHANNELS -1;
-
-    public void setServoPWM(int port)
-    {
-        if(port< LynxConstants.INITIAL_SERVO_PORT||port>lastServo)
-        {
-            throw new IllegalArgumentException(String.format("Servo %d is invalid; valid servos are %d..%d", port, firstServo, lastServo));
-        }
-        LynxSetServoConfigurationCommand cmd = new LynxSetServoConfigurationCommand(this.revHub,port,(int)PwmControl.PwmRange.usFrameDefault);
+    public void setMotorRunMode(int port, DcMotor.RunMode mode, DcMotor.ZeroPowerBehavior behavior) {
+        LynxSetMotorChannelModeCommand cmd = new LynxSetMotorChannelModeCommand(module, port, mode, behavior);
         send(cmd);
     }
-
-    public void enableServoPWM(int port,boolean enable)
-    {
-        LynxSetServoEnableCommand command = new LynxSetServoEnableCommand(this.revHub, port, enable);
-        send(command);
-    }
-
     public void setServoPosition(int port,double position)
     {
         double pwm = Range.clip(position, 0.0,1.0);
-        if(port< LynxConstants.INITIAL_SERVO_PORT||port>lastServo)
-        {
-            throw new IllegalArgumentException(String.format("Servo %d is invalid; valid servos are %d..%d", port, firstServo, lastServo));
-        }
         pwm = Range.scale(pwm,0,1, PwmControl.PwmRange.usPulseLowerDefault, PwmControl.PwmRange.usPulseUpperDefault);
-
-        LynxSetServoPulseWidthCommand cmd = new LynxSetServoPulseWidthCommand(this.revHub,port,(int)pwm);
-
+        LynxSetServoPulseWidthCommand cmd = new LynxSetServoPulseWidthCommand(this.module,port,(int)pwm);
         send(cmd);
     }
 
     public Analog getAnalog(int port) {
         return new Analog(this, port);
     }
-    public int getVoltage() {
-        LynxGetADCResponse response = (LynxGetADCResponse) sendReceive(new LynxGetADCCommand(revHub, LynxGetADCCommand.Channel.BATTERY_MONITOR, LynxGetADCCommand.Mode.ENGINEERING));
-        return response.getValue();
+    public void updateVoltage() {
+        if (voltageTimer.time(TimeUnit.SECONDS) > 10) {
+            module.getInputVoltage(VoltageUnit.VOLTS);
+            voltageTimer.reset();
+        }
     }
 
-    public LynxGetBulkInputDataResponse getBulkData() {
-        return (LynxGetBulkInputDataResponse) sendReceive(new LynxGetBulkInputDataCommand(revHub));
+    public double getVoltage() {
+        return voltage;
+    }
+
+    public void updateBulkData() {
+        bulkData = (LynxGetBulkInputDataResponse) sendReceive(new LynxGetBulkInputDataCommand(module));
+    }
+
+    public void clearBulkData() {
+        if (module.getBulkCachingMode() == LynxModule.BulkCachingMode.MANUAL) {
+            module.clearBulkCache();
+        }
     }
 
     public void send(LynxRespondable message) {
@@ -129,7 +128,7 @@ public class RevHub extends LynxCommExceptionHandler implements RobotArmingState
         }
     }
 
-    public LynxMessage sendReceive(LynxRespondable message) {
+    public LynxMessage sendReceive(LynxDekaInterfaceCommand message) {
         try {
             return message.sendReceive();
         }

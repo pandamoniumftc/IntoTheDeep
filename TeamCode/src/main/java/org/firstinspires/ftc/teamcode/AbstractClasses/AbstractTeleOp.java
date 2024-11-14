@@ -41,7 +41,7 @@ public abstract class AbstractTeleOp extends AbstractOpMode {
             onStart();
 
             while (!isStopRequested()) {
-                //robot.driverLoop();
+                robot.driverLoop();
                 onDriverUpdate();
             }
 
