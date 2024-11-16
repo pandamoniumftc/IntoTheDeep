@@ -15,12 +15,10 @@ public class GrabSampleCommand extends SequentialCommandGroup {
     public GrabSampleCommand(HuaHua robot) {
         super(
                 new IntakeArmCommand(robot, Intake.ArmState.GRABBING),
-                new WaitCommand(500),
+                new WaitCommand(400),
                 new IntakeClawCommand(robot, Intake.ClawState.OPENED),
-                new WaitCommand(500),
-                new RetractIntakeCommand(robot),
-                new WaitCommand(1500),
-                new IntakeClawCommand(robot, Intake.ClawState.CLOSED)
+                new WaitCommand(400),
+                new RetractIntakeCommand(robot)
         );
     }
 }

@@ -11,4 +11,5 @@ public class Globals {
         TELEOP
     }
     public static RobotOpMode opMode;
+    public static boolean telemetryEnable = false;
 }

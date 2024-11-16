@@ -20,24 +20,10 @@ public class Motor {
     public MotionProfile profile;
     public double power, scale, voltage = 12.0;
     public boolean controllerEnabled = true, profileEnabled = true;
-    ElapsedTime profileTimer;
+    public ElapsedTime profileTimer;
     public Motor(RevHub hub, int port) {
         this.hub = hub;
         this.port = port;
-
-        switch ((int) signum(port)) {
-            case -1:
-            case 1:
-                sign = (int) signum(port);
-                break;
-            case 0:
-                sign = 1;
-                break;
-            default:
-                sign = -1;
-                break;
-        }
-
         controllerEnabled = false;
         profileEnabled = false;
     }
@@ -51,18 +37,6 @@ public class Motor {
         this.profile.accel *= scale;
         this.scale = scale;
 
-        switch ((int) signum(port)) {
-            case -1:
-            case 1:
-                sign = (int) signum(port);
-                break;
-            case 0:
-                sign = 1;
-                break;
-            default:
-                sign = -1;
-                break;
-        }
         profileTimer = new ElapsedTime();
     }
 
@@ -110,5 +84,8 @@ public class Motor {
     }
     public void setRunModes(DcMotor.RunMode mode, DcMotor.ZeroPowerBehavior behavior) {
         hub.setMotorRunMode(port, mode, behavior);
+    }
+    public void setDirection(int sign) {
+        this.sign = sign;
     }
 }

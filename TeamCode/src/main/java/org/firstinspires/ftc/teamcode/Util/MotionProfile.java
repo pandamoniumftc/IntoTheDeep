@@ -19,6 +19,7 @@ public class MotionProfile {
     public double t2_stop_position;
     public boolean flipped = false;
     public double originalPos = 0;
+    public double position = 0;
 
     public double velo, accel;
 
@@ -63,7 +64,7 @@ public class MotionProfile {
     }
 
     public double calculate(double time) {
-        double position, velocity, acceleration, stage_time;
+        double velocity, acceleration, stage_time;
         if (time <= t1) {
             stage_time = time;
             acceleration = this.accel;

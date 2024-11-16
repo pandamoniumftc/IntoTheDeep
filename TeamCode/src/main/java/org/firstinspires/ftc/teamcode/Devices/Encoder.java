@@ -38,4 +38,7 @@ public class Encoder {
     public int getCount() {
         return hub.bulkData.getEncoder(port);
     }
+    public void setDirection(int sign) {
+        this.direction = sign;
+    }
 }

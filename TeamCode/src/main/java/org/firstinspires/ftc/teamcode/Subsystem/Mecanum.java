@@ -29,6 +29,9 @@ public class Mecanum extends AbstractSubsystem {
         this.flm = this.robot.controlHub.getMotor(flm);
         this.brm = this.robot.controlHub.getMotor(brm);
         this.blm = this.robot.controlHub.getMotor(blm);
+
+        this.frm.setDirection(-1);
+        this.brm.setDirection(-1);
     }
 
     @Override
@@ -45,7 +48,9 @@ public class Mecanum extends AbstractSubsystem {
     public void driverLoop() {
         setDrivePower();
 
-        //robot.telemetry.addData("angle", robot.getAngle());
+        if (Globals.telemetryEnable) {
+            robot.telemetry.addData("angle", robot.getAngle(AngleUnit.DEGREES));
+        }
     }
 
     @Override
@@ -61,7 +66,7 @@ public class Mecanum extends AbstractSubsystem {
     }
 
     public void moveRobot(Pose p, double angle) {
-        p.rotate(angle);
+        p.rotate(-angle);
 
         p.x = clip(p.x, -1, 1);
         p.y = clip(p.y, -1, 1);

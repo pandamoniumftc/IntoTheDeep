@@ -13,6 +13,7 @@ import com.qualcomm.robotcore.util.RobotLog;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.Devices.RevHub;
+import org.firstinspires.ftc.teamcode.Robots.Globals;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -30,6 +31,8 @@ public abstract class AbstractRobot {
         this.opMode =  opMode;
         this.telemetry = opMode.telemetry;
         this.hardwareMap = opMode.hardwareMap;
+
+        telemetry.setItemSeparator(": ");
 
         controlHub = new RevHub(hardwareMap, "Control Hub");
         expansionHub = new RevHub(hardwareMap, "Expansion Hub 2");
@@ -106,7 +109,10 @@ public abstract class AbstractRobot {
         for (AbstractSubsystem system : subsystems) {
             system.driverLoop();
         }
-        telemetry.update();
+
+        if (Globals.telemetryEnable) {
+            telemetry.update();
+        }
     }
 
     public final void stop() {
@@ -120,7 +126,6 @@ public abstract class AbstractRobot {
         controlHub.clearBulkData();
         expansionHub.clearBulkData();
     }
-
     public void updateBulkData() {
         controlHub.updateBulkData();
         expansionHub.updateBulkData();
@@ -128,8 +133,13 @@ public abstract class AbstractRobot {
     public void updateVoltage() {
         controlHub.updateVoltage();
     }
-
     public double getAngle(AngleUnit unit) {
         return imu.getRobotYawPitchRollAngles().getYaw(unit);
+    }
+    public void resetAngle() {
+        imu.resetYaw();
+    }
+    public void enableTelemetry(boolean enable) {
+        Globals.telemetryEnable = enable;
     }
 }

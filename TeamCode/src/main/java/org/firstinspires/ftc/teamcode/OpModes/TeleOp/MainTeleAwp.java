@@ -16,9 +16,13 @@ import org.firstinspires.ftc.teamcode.Robots.HuaHua;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.HorizontalSlidesCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeArmCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeClawCommand;
+import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeArmCommand;
+import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeClawCommand;
 import org.firstinspires.ftc.teamcode.Schedule.TeleOpCommand.ExtendIntakeCommand;
 import org.firstinspires.ftc.teamcode.Schedule.TeleOpCommand.GrabSampleCommand;
+import org.firstinspires.ftc.teamcode.Schedule.TeleOpCommand.TransferSampleCommand;
 import org.firstinspires.ftc.teamcode.Subsystem.Intake;
+import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
 import org.firstinspires.ftc.teamcode.Util.Pose;
 
 @TeleOp (name="main tele op")
@@ -36,6 +40,10 @@ public class MainTeleAwp extends AbstractTeleOp {
     @Override
     public void onInit() {
         robot.imu.resetYaw();
+        robot.enableTelemetry(false);
+
+        // reset angle
+        robot.gamepad1.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenPressed(() -> robot.resetAngle());
 
         // extend intake arm
         robot.gamepad2.getGamepadButton(GamepadKeys.Button.B).
@@ -48,31 +56,18 @@ public class MainTeleAwp extends AbstractTeleOp {
                 whenPressed(
                         new GrabSampleCommand(robot).whenFinished(() -> robot.gamepad2.gamepad.rumble(150))
                 );
-        /*robot.gamepad2.getGamepadButton(GamepadKeys.Button.X).
-                whenPressed(
-                        new HorizontalSlidesCommand(robot, 8).whenFinished(() -> robot.gamepad2.gamepad.rumble(150))
-                );
 
-        robot.gamepad2.getGamepadButton(GamepadKeys.Button.Y).
-                whenPressed(
-                        new HorizontalSlidesCommand(robot, 0).whenFinished(() -> robot.gamepad2.gamepad.rumble(150))
-                );*/
-
-        // transfer sample
-        /*robot.gamepad2.getGamepadButton(GamepadKeys.Button.X).
-                    whenPressed(
-                            new TransferSampleCommand(robot).whenFinished(() -> robot.gamepad2.gamepad.rumble(150))
-                    );*/
-
-        /*robot.gamepad2.getGamepadButton(GamepadKeys.Button.Y).
-                    whenPressed(
-                            new RetractOuttakeArm(robot).whenFinished(() -> robot.gamepad2.gamepad.rumble(150))
-                    );*/
+        // toggle
+        robot.gamepad2.getGamepadButton(GamepadKeys.Button.X).
+                    toggleWhenPressed(
+                            new OuttakeArmCommand(robot, Outtake.ArmState.SCORING),
+                            new OuttakeArmCommand(robot, Outtake.ArmState.TRANSFERING)
+                    );
 
         CommandScheduler.getInstance().schedule(new IntakeArmCommand(robot, robot.intake.armState));
         CommandScheduler.getInstance().schedule(new InstantCommand(() -> robot.intake.resetClawRotation()));
         CommandScheduler.getInstance().schedule(new IntakeClawCommand(robot, robot.intake.clawState));
-        CommandScheduler.getInstance().schedule(new HorizontalSlidesCommand(robot, 0));
+        CommandScheduler.getInstance().schedule(new OuttakeArmCommand(robot, robot.outtake.armState));
     }
 
     @Override
@@ -86,18 +81,20 @@ public class MainTeleAwp extends AbstractTeleOp {
         );
 
         if (robot.intake.armState == Intake.ArmState.INTAKING) {
-            // rotate claw and move slides freely when intaking
             robot.intake.rotateClaw(robot.gamepad2.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER), robot.gamepad2.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER));
-            //robot.intake.slideM.setPower(robot.gamepad2.getLeftY());
-            robot.intake.moveSlides(robot.gamepad2.getLeftY());
         }
 
-        // go to scoring mode
-        /*if (robot.outtake.armState == Outtake.ArmState.SCORING) {
-            robot.outtake.updateClawState(robot.gamepad2.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).get() ? Outtake.ClawState.OPENED : Outtake.ClawState.CLOSED);
-            robot.outtake.moveSlides(robot.gamepad2.getLeftY());
-        }*/
-        robot.telemetry.addData("hz", 1E9 / (System.nanoTime() - loopStamp));
+        if (robot.intake.armState == Intake.ArmState.TRANSFERING && robot.intake.clawState == Intake.ClawState.OPENED && robot.intake.slideM.reachedPosition(0.04)) {
+            CommandScheduler.getInstance().schedule(new TransferSampleCommand(robot));
+        }
+
+        if (robot.outtake.armState == Outtake.ArmState.SCORING) {
+            robot.outtake.updateClawState(robot.gamepad2.getGamepadButton(GamepadKeys.Button.Y).get() ? Outtake.ClawState.OPENED : Outtake.ClawState.CLOSED);
+        }
+
+        robot.outtake.moveSlides(robot.gamepad2.getLeftY());
+
+        robot.telemetry.addData("HZ", 1E9 / (System.nanoTime() - loopStamp));
         loopStamp = System.nanoTime();
     }
 
