@@ -21,8 +21,7 @@ public class OuttakeArmCommand extends SequentialCommandGroup {
                         new SequentialCommandGroup(
                                 new InstantCommand(() -> robot.outtake.moveArm()),
                                 new WaitCommand(1000),
-                                new InstantCommand(() -> robot.outtake.rotateClaw()),
-                                new OuttakeClawCommand(robot, Outtake.ClawState.OPENED)
+                                new InstantCommand(() -> robot.outtake.rotateClaw())
                         ),
                         () -> state == Outtake.ArmState.SCORING
                 )

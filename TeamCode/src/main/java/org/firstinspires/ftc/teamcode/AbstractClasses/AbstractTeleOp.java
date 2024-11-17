@@ -33,7 +33,9 @@ public abstract class AbstractTeleOp extends AbstractOpMode {
 
             RobotLog.ii("before while loop", "woo");
 
-            while (!isStarted() && !isStopRequested()) {}
+            while (!isStarted() && !isStopRequested()) {
+                CommandScheduler.getInstance().run();
+            }
 
             RobotLog.ii("after while loop", "woo");
 
@@ -41,7 +43,7 @@ public abstract class AbstractTeleOp extends AbstractOpMode {
             onStart();
 
             while (!isStopRequested()) {
-                robot.driverLoop();
+                //robot.driverLoop();
                 onDriverUpdate();
             }
 

@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode.Subsystem;
 
 import static com.qualcomm.robotcore.util.Range.clip;
 
+import static org.firstinspires.ftc.teamcode.Robots.Globals.RobotOpMode.AUTO;
+
 import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.teamcode.AbstractClasses.AbstractRobot;
@@ -36,8 +38,7 @@ public class Outtake extends AbstractSubsystem {
         CLOSED
     }
     public ClawState clawState;
-    double slidePos = 0;
-    private final double KP = 0.5, KI = 0.0, KD = 0.0, VELO = 2.0, ACCEL = 2.0;
+    private final double KP = 0.05, KI = 0.0, KD = 0.0, VELO = 3.0, ACCEL = 2.0;
     public Outtake(AbstractRobot robot, int lsm, int rsm, int cs, int rs, int lps, int rps) {
         super(robot);
         this.robot = (HuaHua) robot;
@@ -61,9 +62,9 @@ public class Outtake extends AbstractSubsystem {
 
         rightMotor.setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE);
         leftMotor.setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE);
-        rightMotor.setDirection(-1);
-        leftMotor.setDirection(1);
-        rightMotor.encoder.setDirection(1);
+        rightMotor.setDirection(1);
+        leftMotor.setDirection(-1);
+        rightMotor.encoder.setDirection(-1);
 
         clawS = this.robot.controlHub.getServo(cs);
         rotateS = this.robot.controlHub.getServo(rs);
@@ -97,13 +98,20 @@ public class Outtake extends AbstractSubsystem {
 
     @Override
     public void driverLoop() {
-        //leftMotor.update();
-        //rightMotor.update();
+        if (Globals.opMode == AUTO) {
+            leftMotor.setVoltage(robot.controlHub.getVoltage());
+            rightMotor.setVoltage(robot.controlHub.getVoltage());
+
+            leftMotor.update();
+            rightMotor.update();
+        }
 
         if (Globals.telemetryEnable) {
-            robot.telemetry.addData("OUTTAKE ARM STATE", armState);
-            robot.telemetry.addData("OUTTAKE CLAW STATE", clawState);
+            //robot.telemetry.addData("OUTTAKE ARM STATE", armState);
+            //robot.telemetry.addData("OUTTAKE CLAW STATE", clawState);
             robot.telemetry.addData("OUTTAKE SLIDES POS", (15.5 + rightMotor.getPosition()) + " inches");
+            robot.telemetry.addData("RIGHT", robot.outtake.rightMotor.power);
+            robot.telemetry.addData("LEFT", robot.outtake.leftMotor.power);
         }
     }
 
@@ -118,7 +126,6 @@ public class Outtake extends AbstractSubsystem {
         lPivotS.setPresetPosition(armState.index);
         rPivotS.setPresetPosition(armState.index);
     }
-
     public void updateArmState(ArmState state) {
         this.armState = state;
     }
@@ -129,5 +136,8 @@ public class Outtake extends AbstractSubsystem {
     public void moveSlides(double jInput) {
         leftMotor.setPower(jInput);
         rightMotor.setPower(jInput);
+    }
+    public double getSlidesPosition() {
+        return rightMotor.getPosition();
     }
 }

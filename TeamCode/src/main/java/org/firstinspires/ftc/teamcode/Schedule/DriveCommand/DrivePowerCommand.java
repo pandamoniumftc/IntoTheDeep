@@ -19,22 +19,22 @@ public class DrivePowerCommand extends CommandBase {
         RIGHT,
         BACKWARD
     }
-    public DrivePowerCommand(HuaHua robot, Direction direction, double time) {
+    public DrivePowerCommand(HuaHua robot, Direction direction, double time, double maxPower) {
         this.robot = robot;
         this.time = time;
 
         switch(direction) {
             case FORWARD:
-                inputPower = new Pose(0, 1);
+                inputPower = new Pose(0, 1 * maxPower);
                 break;
             case BACKWARD:
-                inputPower = new Pose(0, -1);
+                inputPower = new Pose(0, -1 * maxPower);
                 break;
             case LEFT:
-                inputPower = new Pose(-1, 0);
+                inputPower = new Pose(-1 * maxPower, 0);
                 break;
             case RIGHT:
-                inputPower = new Pose(1, 0);
+                inputPower = new Pose(1 * maxPower, 0);
                 break;
         }
 
@@ -48,16 +48,21 @@ public class DrivePowerCommand extends CommandBase {
 
     @Override
     public void execute() {
+        robot.drive.moveRobot(inputPower);
+    }
+
+    @Override
+    public boolean isFinished() {
         if (timer.time(TimeUnit.SECONDS) > time) {
-            robot.drive.stopRobot();
+            return true;
         }
         else {
-            robot.drive.moveRobot(inputPower);
+            return false;
         }
     }
 
     @Override
     public void end(boolean interrupted) {
-
+        robot.drive.stopRobot();
     }
 }

@@ -18,7 +18,7 @@ public class LinePath {
         double y = P1.y - P0.y;
         return new Pose(x, y);
     }
-    public boolean isPositionOnPath() {
+    public boolean isPositionOnPath(Pose current) {
         return true;
     }
 }

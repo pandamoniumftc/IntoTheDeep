@@ -100,18 +100,9 @@ public abstract class AbstractRobot {
 
     public final void driverLoop() {
         RobotLog.ii("before driverloop robot", "woo");
-        CommandScheduler.getInstance().run();
-
-        clearBulkData();
-        updateBulkData();
-        updateVoltage();
 
         for (AbstractSubsystem system : subsystems) {
             system.driverLoop();
-        }
-
-        if (Globals.telemetryEnable) {
-            telemetry.update();
         }
     }
 
@@ -120,18 +111,6 @@ public abstract class AbstractRobot {
         for (AbstractSubsystem system : subsystems) {
             system.stop();
         }
-    }
-
-    public void clearBulkData() {
-        controlHub.clearBulkData();
-        expansionHub.clearBulkData();
-    }
-    public void updateBulkData() {
-        controlHub.updateBulkData();
-        expansionHub.updateBulkData();
-    }
-    public void updateVoltage() {
-        controlHub.updateVoltage();
     }
     public double getAngle(AngleUnit unit) {
         return imu.getRobotYawPitchRollAngles().getYaw(unit);

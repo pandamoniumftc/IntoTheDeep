@@ -6,6 +6,8 @@ import static java.lang.Math.cos;
 import static java.lang.Math.hypot;
 import static java.lang.Math.sin;
 
+import com.qualcomm.robotcore.util.Range;
+
 public class Pose {
     public double x, y, r;
     public enum Operation {
@@ -57,6 +59,37 @@ public class Pose {
                 r /= p.r;
                 break;
         }
+    }
+
+    public void applyOperation(double p, Operation opp) {
+        switch (opp) {
+            case ADD:
+                x += p;
+                y += p;
+                r += p;
+                break;
+            case SUBTRACT:
+                x -= p;
+                y -= p;
+                r -= p;
+                break;
+            case MULTIPLY:
+                x *= p;
+                y *= p;
+                r *= p;
+                break;
+            case DIVIDE:
+                x /= p;
+                y /= p;
+                r /= p;
+                break;
+        }
+    }
+
+    public void clip(double min, double max) {
+        x = Range.clip(x, min, max);
+        y = Range.clip(y, min, max);
+        r = Range.clip(r, min, max);
     }
 
     public double magnitude() {

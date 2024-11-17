@@ -59,6 +59,11 @@ public class Mecanum extends AbstractSubsystem {
     }
 
     public void setDrivePower() {
+        flm.setVoltage(robot.controlHub.getVoltage());
+        frm.setVoltage(robot.controlHub.getVoltage());
+        blm.setVoltage(robot.controlHub.getVoltage());
+        brm.setVoltage(robot.controlHub.getVoltage());
+
         flm.setPower(power[0]);
         frm.setPower(power[1]);
         blm.setPower(power[2]);
@@ -68,14 +73,12 @@ public class Mecanum extends AbstractSubsystem {
     public void moveRobot(Pose p, double angle) {
         p.rotate(-angle);
 
-        p.x = clip(p.x, -1, 1);
-        p.y = clip(p.y, -1, 1);
-        p.r = clip(p.r, -1, 1);
+        p.clip(-1, 1);
 
         power[0] = (p.y+p.x+p.r); // flm
-        power[1] = (p.y-p.x-p.r); // frm
+        power[1] = (p.y+p.x-p.r); // frm
         power[2] = (p.y-p.x+p.r); // blm
-        power[3] = (p.y+p.x-p.r); // brm
+        power[3] = (p.y-p.x-p.r); // brm
 
         double max = 1.0;
         for (double pow : power) max = Math.max(max, abs(pow));

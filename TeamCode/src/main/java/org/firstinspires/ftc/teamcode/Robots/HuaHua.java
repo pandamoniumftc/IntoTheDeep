@@ -22,8 +22,10 @@ public class HuaHua extends AbstractRobot {
     public Outtake outtake;
     public HuaHua(OpMode opMode) {
         super(opMode);
-        drive = new Mecanum(this, 0, 1, 2, 3);
+        drive = new Mecanum(this, 0, 2, 3, 1);
         intake = new Intake(this, 2, 2,0, 1, 2, 3, 4, 5);
         outtake = new Outtake(this, 0, 1,1, 4, 0, 3);
+        //odometry = new ThreeWheelLocalizer(this, 3, 1, 2);
+        //proximity = new ProximitySensors(this);
     }
 }

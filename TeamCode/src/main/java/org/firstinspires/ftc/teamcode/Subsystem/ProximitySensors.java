@@ -1,6 +1,8 @@
 package org.firstinspires.ftc.teamcode.Subsystem;
 
 import com.qualcomm.hardware.lynx.commands.core.LynxI2cConfigureChannelCommand;
+import com.qualcomm.hardware.rev.Rev2mDistanceSensor;
+import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
@@ -12,18 +14,18 @@ import java.io.IOException;
 
 public class ProximitySensors extends AbstractSubsystem {
     HuaHua robot;
-    DistanceSensor front, left, right, back;
+    Rev2mDistanceSensor front, left, right, back;
     public double frontVal, leftVal, rightVal, backVal;
     public ProximitySensors(AbstractRobot robot) {
         super(robot);
         this.robot = (HuaHua) robot;
 
-        this.robot.expansionHub.setIC2Speed(LynxI2cConfigureChannelCommand.SpeedCode.HIGH_3_4M);
+        this.robot.controlHub.setIC2Speed(LynxI2cConfigureChannelCommand.SpeedCode.HIGH_3_4M);
 
-        front = robot.hardwareMap.get(DistanceSensor.class, "f");
-        left = robot.hardwareMap.get(DistanceSensor.class, "l");
-        right = robot.hardwareMap.get(DistanceSensor.class, "r");
-        back = robot.hardwareMap.get(DistanceSensor.class, "b");
+        front = robot.hardwareMap.get(Rev2mDistanceSensor.class, "f");
+        left = robot.hardwareMap.get(Rev2mDistanceSensor.class, "l");
+        right = robot.hardwareMap.get(Rev2mDistanceSensor.class, "r");
+        back = robot.hardwareMap.get(Rev2mDistanceSensor.class, "b");
     }
 
     @Override
@@ -38,14 +40,19 @@ public class ProximitySensors extends AbstractSubsystem {
 
     @Override
     public void driverLoop() {
-        frontVal = front.getDistance(DistanceUnit.MM);
-        leftVal = left.getDistance(DistanceUnit.MM);
-        rightVal = right.getDistance(DistanceUnit.MM);
-        backVal = back.getDistance(DistanceUnit.MM);
+        update();
+        robot.telemetry.addData("distance", frontVal + " " + leftVal);
     }
 
     @Override
     public void stop() {
 
+    }
+
+    public void update() {
+        frontVal = front.getDistance(DistanceUnit.INCH);
+        leftVal = left.getDistance(DistanceUnit.INCH);
+        rightVal = right.getDistance(DistanceUnit.INCH);
+        backVal = back.getDistance(DistanceUnit.INCH);
     }
 }
