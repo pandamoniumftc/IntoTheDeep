@@ -1,12 +1,8 @@
-package org.firstinspires.ftc.teamcode.Schedule.TeleOpCommand;
+package org.firstinspires.ftc.teamcode.Schedule.MacroCommand;
 
-import com.arcrobotics.ftclib.command.Command;
-import com.arcrobotics.ftclib.command.ConditionalCommand;
-import com.arcrobotics.ftclib.command.InstantCommand;
 import com.arcrobotics.ftclib.command.SequentialCommandGroup;
 import com.arcrobotics.ftclib.command.WaitCommand;
 
-import org.firstinspires.ftc.teamcode.Robots.HuaHua;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.HorizontalSlidesCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeArmCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeClawCommand;
@@ -15,14 +11,13 @@ import org.firstinspires.ftc.teamcode.Subsystem.Intake;
 import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
 
 public class ExtendIntakeCommand extends SequentialCommandGroup {
-    public ExtendIntakeCommand(HuaHua robot) {
+    public ExtendIntakeCommand() {
         super(
-                new HorizontalSlidesCommand(robot, 10),
-                new OuttakeClawCommand(robot, Outtake.ClawState.OPENED),
+                new IntakeClawCommand(Intake.ClawState.CLOSED),
+                //new OuttakeClawCommand(Outtake.ClawState.OPENED),
+                new HorizontalSlidesCommand(240),
                 new WaitCommand(500),
-                new IntakeArmCommand(robot, Intake.ArmState.INTAKING),
-                new WaitCommand(500),
-                new IntakeClawCommand(robot, Intake.ClawState.CLOSED)
+                new IntakeArmCommand(Intake.ArmState.INTAKING)
         );
     }
 }

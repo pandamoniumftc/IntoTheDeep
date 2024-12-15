@@ -1,87 +1,77 @@
 package org.firstinspires.ftc.teamcode.Subsystem;
 
 import static com.qualcomm.robotcore.util.Range.clip;
-import static java.lang.Double.min;
 import static java.lang.Math.abs;
 import static java.lang.Math.cos;
-import static java.lang.Math.signum;
 import static java.lang.Math.sin;
+import static java.lang.Math.max;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.teamcode.AbstractClasses.AbstractRobot;
-import org.firstinspires.ftc.teamcode.AbstractClasses.AbstractSubsystem;
-import org.firstinspires.ftc.teamcode.Devices.Motor;
-import org.firstinspires.ftc.teamcode.Robots.Globals;
-import org.firstinspires.ftc.teamcode.Robots.HuaHua;
-import org.firstinspires.ftc.teamcode.Util.Pose;
+import com.arcrobotics.ftclib.geometry.Translation2d;
+import com.arcrobotics.ftclib.geometry.Vector2d;
+import com.qualcomm.robotcore.hardware.DcMotor;
 
-import java.io.IOException;
+import org.firstinspires.ftc.teamcode.Hardware.Motor;
+import org.firstinspires.ftc.teamcode.Hardware.Robot;
+import org.firstinspires.ftc.teamcode.Hardware.Subsystem;
 
-public class Mecanum extends AbstractSubsystem {
-    HuaHua robot;
-    public Motor frm, flm, brm, blm;
-    public double[] power = new double[4];
-    public Mecanum(AbstractRobot robot, int flm, int frm, int blm, int brm) {
-        super(robot);
-        this.robot = (HuaHua) robot;
+public class Mecanum extends Subsystem {
+    private Robot robot;
+    public double[] power;
+    public Mecanum() {
+        robot = Robot.getInstance();
 
-        this.frm = this.robot.controlHub.getMotor(frm);
-        this.flm = this.robot.controlHub.getMotor(flm);
-        this.brm = this.robot.controlHub.getMotor(brm);
-        this.blm = this.robot.controlHub.getMotor(blm);
+        robot.frontLeftMotor = robot.controlHub.getMotor(0)
+                .setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
+                .setDirection(Motor.Direction.FORWARD);
 
-        this.frm.setDirection(-1);
-        this.brm.setDirection(-1);
+        robot.frontRightMotor = robot.controlHub.getMotor(0)
+                .setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
+                .setDirection(Motor.Direction.REVERSE);
+
+        robot.backLeftMotor = robot.controlHub.getMotor(0)
+                .setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
+                .setDirection(Motor.Direction.FORWARD);
+
+        robot.backRightMotor = robot.controlHub.getMotor(0)
+                .setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
+                .setDirection(Motor.Direction.REVERSE);
+
+        power = new double[4];
     }
 
     @Override
-    public void init() throws IOException {
+    public void read() {
 
     }
 
     @Override
-    public void start() {
+    public void loop() {
 
     }
 
     @Override
-    public void driverLoop() {
-        setDrivePower();
-
-        if (Globals.telemetryEnable) {
-            robot.telemetry.addData("angle", robot.getAngle(AngleUnit.DEGREES));
-        }
+    public void write() {
+        robot.frontLeftMotor.write(power[0]);
+        robot.frontRightMotor.write(power[1]);
+        robot.backLeftMotor.write(power[2]);
+        robot.backRightMotor.write(power[3]);
     }
 
-    @Override
-    public void stop() {
+    public void moveRobot(Vector2d left, Vector2d right, double angle) {
+        Vector2d l = left.normalize();
+        l = l.rotateBy(-Math.toDegrees(angle));
 
-    }
+        double x = clip(l.getX(), -1, 1);
+        double y = clip(l.getY(), -1, 1);
+        double r = clip(right.getX(), -1, 1);
 
-    public void setDrivePower() {
-        flm.setVoltage(robot.controlHub.getVoltage());
-        frm.setVoltage(robot.controlHub.getVoltage());
-        blm.setVoltage(robot.controlHub.getVoltage());
-        brm.setVoltage(robot.controlHub.getVoltage());
-
-        flm.setPower(power[0]);
-        frm.setPower(power[1]);
-        blm.setPower(power[2]);
-        brm.setPower(power[3]);
-    }
-
-    public void moveRobot(Pose p, double angle) {
-        p.rotate(-angle);
-
-        p.clip(-1, 1);
-
-        power[0] = (p.y+p.x+p.r); // flm
-        power[1] = (p.y+p.x-p.r); // frm
-        power[2] = (p.y-p.x+p.r); // blm
-        power[3] = (p.y-p.x-p.r); // brm
+        power[0] = (y+x+r); // flm
+        power[1] = (y+x-r); // frm
+        power[2] = (y-x+r); // blm
+        power[3] = (y-x-r); // brm
 
         double max = 1.0;
-        for (double pow : power) max = Math.max(max, abs(pow));
+        for (double pow : power) max = max(max, abs(pow));
 
         if (max > 1) {
             power[0] /= max;
@@ -91,11 +81,7 @@ public class Mecanum extends AbstractSubsystem {
         }
     }
 
-    public void moveRobot(Pose p) {
-        moveRobot(p, 0);
-    }
-
     public void stopRobot() {
-        moveRobot(new Pose());
+        moveRobot(new Vector2d(), new Vector2d(), 0);
     }
 }

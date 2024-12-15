@@ -1,151 +1,119 @@
 package org.firstinspires.ftc.teamcode.OpModes.TeleOp;
 
-import static com.qualcomm.robotcore.util.Range.clip;
-
+import com.arcrobotics.ftclib.command.CommandOpMode;
 import com.arcrobotics.ftclib.command.CommandScheduler;
-import com.arcrobotics.ftclib.command.ConditionalCommand;
 import com.arcrobotics.ftclib.command.InstantCommand;
-import com.arcrobotics.ftclib.command.SequentialCommandGroup;
-import com.arcrobotics.ftclib.command.WaitCommand;
+import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.arcrobotics.ftclib.gamepad.GamepadKeys;
+import com.arcrobotics.ftclib.geometry.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.teamcode.AbstractClasses.AbstractRobot;
-import org.firstinspires.ftc.teamcode.AbstractClasses.AbstractTeleOp;
-import org.firstinspires.ftc.teamcode.Robots.Globals;
-import org.firstinspires.ftc.teamcode.Robots.HuaHua;
-import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.HorizontalSlidesCommand;
-import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeArmCommand;
-import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeClawCommand;
+import org.firstinspires.ftc.teamcode.Hardware.Globals;
+import org.firstinspires.ftc.teamcode.Hardware.Robot;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeArmCommand;
-import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeClawCommand;
-import org.firstinspires.ftc.teamcode.Schedule.TeleOpCommand.ExtendIntakeCommand;
-import org.firstinspires.ftc.teamcode.Schedule.TeleOpCommand.GrabSampleCommand;
-import org.firstinspires.ftc.teamcode.Schedule.TeleOpCommand.TransferSampleCommand;
+import org.firstinspires.ftc.teamcode.Schedule.MacroCommand.ExtendIntakeCommand;
+import org.firstinspires.ftc.teamcode.Schedule.MacroCommand.GrabSampleCommand;
+import org.firstinspires.ftc.teamcode.Schedule.MacroCommand.TransferSampleCommand;
 import org.firstinspires.ftc.teamcode.Subsystem.Intake;
 import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
-import org.firstinspires.ftc.teamcode.Util.Pose;
 
 @TeleOp (name="main tele op")
-public class MainTeleAwp extends AbstractTeleOp {
-    HuaHua robot;
+public class MainTeleAwp extends CommandOpMode {
+    Robot robot = Robot.getInstance();
+    GamepadEx Gamepad1, Gamepad2;
     final double MIN_MOTOR_POWER = 0.4;
     long loopStamp = 0L;
     boolean SpecimenScoringMode = false;
     @Override
-    public AbstractRobot instantiateRobot() {
-        robot = new HuaHua(this);
+    public void initialize() {
+        CommandScheduler.getInstance().reset();
 
-        return robot;
-    }
+        Globals.telemetryEnable = true;
 
-    @Override
-    public void onInit() {
-        robot.imu.resetYaw();
-        robot.enableTelemetry(true);
+        Globals.opMode = Globals.RobotOpMode.TELEOP;
 
-        // reset angle
-        robot.gamepad1.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenPressed(() -> robot.resetAngle());
+        Gamepad1 = new GamepadEx(gamepad1);
+        Gamepad2 = new GamepadEx(gamepad2);
 
-        // extend intake arm
-        robot.gamepad2.getGamepadButton(GamepadKeys.Button.B).
-                whenPressed(
-                        new ExtendIntakeCommand(robot).whenFinished(() -> robot.gamepad2.gamepad.rumble(150))
-                );
+        robot.initialize(hardwareMap);
 
-        // grabs object
-        robot.gamepad2.getGamepadButton(GamepadKeys.Button.A).
-                whenPressed(
-                        new GrabSampleCommand(robot).whenFinished(() -> robot.gamepad2.gamepad.rumble(150))
-                );
-
-        // extends and retract outtake arm when specimen mode
-        robot.gamepad2.getGamepadButton(GamepadKeys.Button.X).
+        // extend and retracts intake arm
+        Gamepad2.getGamepadButton(GamepadKeys.Button.B).
                 toggleWhenPressed(
-                        new ConditionalCommand(
-                                new OuttakeArmCommand(robot, Outtake.ArmState.SCORING),
-                                new WaitCommand(0),
-                                () -> SpecimenScoringMode
-                        ),
-                        new ConditionalCommand(
-                                new OuttakeArmCommand(robot, Outtake.ArmState.TRANSFERING),
-                                new WaitCommand(0),
-                                () -> SpecimenScoringMode
-                        )
+                        new ExtendIntakeCommand(),
+                        new GrabSampleCommand()
                 );
+
+        // retracts slides and transfers object
+        Gamepad2.getGamepadButton(GamepadKeys.Button.A).whenPressed(new TransferSampleCommand());
 
         // switches between scoring modes
-        robot.gamepad2.getGamepadButton(GamepadKeys.Button.START).
+        Gamepad2.getGamepadButton(GamepadKeys.Button.START).
                 toggleWhenPressed(
                         new InstantCommand(() -> SpecimenScoringMode = true),
                         new InstantCommand(() -> SpecimenScoringMode = false)
                 );
 
-        CommandScheduler.getInstance().schedule(new IntakeArmCommand(robot, robot.intake.armState));
-        CommandScheduler.getInstance().schedule(new InstantCommand(() -> robot.intake.resetClawRotation()));
-        CommandScheduler.getInstance().schedule(new IntakeClawCommand(robot, robot.intake.clawState));
-        CommandScheduler.getInstance().schedule(new OuttakeArmCommand(robot, robot.outtake.armState));
-        CommandScheduler.getInstance().schedule(new OuttakeClawCommand(robot, robot.outtake.clawState));
+        robot.horizontalSlideActuator.setInitialPosition();
+        //robot.verticalSlidesActuator.setInitialPosition();
+
+        robot.intake.updateClawState(Intake.ClawState.CLOSED);
+        robot.intake.updateArmState(Intake.ArmState.DEFAULT);
+        //robot.outtake.updateArmState(Outtake.ArmState.TRANSFERING);
+        //robot.outtake.updateClawState(Outtake.ClawState.OPENED);
+
+        telemetry.addLine("Robot Initialized");
+        telemetry.update();
     }
 
     @Override
-    public void onDriverUpdate() {
+    public void run() {
         CommandScheduler.getInstance().run();
-        robot.expansionHub.updateBulkData();
-        robot.expansionHub.clearBulkData();
         robot.controlHub.updateVoltage();
-        robot.expansionHub.updateVoltage();
+        robot.read();
+        robot.loop();
+        robot.write();
 
-        // ----------------- MECANUM DRIVE -----------------
-        double scale = (1.0 - MIN_MOTOR_POWER) * (1.0 - robot.gamepad1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)) + MIN_MOTOR_POWER;
+        double scale = (1.0 - MIN_MOTOR_POWER) * (1.0 - Gamepad1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)) + MIN_MOTOR_POWER;
 
-        robot.drive.moveRobot(new Pose(
-                        robot.gamepad1.getLeftX() * scale, robot.gamepad1.getLeftY() * scale, robot.gamepad1.getRightX() * scale),
-                robot.getAngle(AngleUnit.RADIANS)
-        );
+        /*robot.drive.moveRobot(
+                new Vector2d(Gamepad1.getLeftX(), Gamepad1.getLeftY()).scale(scale),
+                new Vector2d(Gamepad1.getRightX(), Gamepad1.getRightY()).scale(scale),
+                robot.odometry.getHeading()
+        );*/
 
-        robot.drive.setDrivePower();
-        robot.telemetry.addData("angle", robot.getAngle(AngleUnit.DEGREES));
-
-        // ------------------- INTAKE --------------------
-        if (robot.intake.armState == Intake.ArmState.INTAKING) {
-            robot.intake.rotateClaw(robot.gamepad2.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER), robot.gamepad2.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER));
+        if (robot.outtake.getSlidesPosition() > 4 && robot.outtake.armState == Outtake.ArmState.TRANSFERING && !SpecimenScoringMode) {
+            CommandScheduler.getInstance().schedule(new OuttakeArmCommand(Outtake.ArmState.SCORING));
+        }
+        else if (robot.outtake.getSlidesPosition() < 4 && robot.outtake.armState == Outtake.ArmState.SCORING && !SpecimenScoringMode) {
+            CommandScheduler.getInstance().schedule(new OuttakeArmCommand(Outtake.ArmState.TRANSFERING));
         }
 
-        if (robot.intake.armState == Intake.ArmState.TRANSFERING && robot.intake.clawState == Intake.ClawState.OPENED && robot.intake.slideM.reachedPosition(0.08) && robot.intake.slideM.getPosition() < 0.5) {
-            CommandScheduler.getInstance().schedule(new TransferSampleCommand(robot));
-        }
-
-        robot.intake.slideM.setVoltage(robot.controlHub.getVoltage());
-        robot.intake.slideM.update();
-
-        // ------------------- OUTTAKE ---------------------
-
-        if (robot.outtake.getSlidesPosition() > 9 && robot.outtake.armState == Outtake.ArmState.TRANSFERING && !SpecimenScoringMode) {
-            CommandScheduler.getInstance().schedule(new OuttakeArmCommand(robot, Outtake.ArmState.SCORING));
-        }
-        else if (robot.outtake.getSlidesPosition() < 9 && robot.outtake.armState == Outtake.ArmState.SCORING && !SpecimenScoringMode) {
-            CommandScheduler.getInstance().schedule(new OuttakeArmCommand(robot, Outtake.ArmState.TRANSFERING));
+        if (robot.outtake.armState == Outtake.ArmState.TRANSFERING && SpecimenScoringMode) {
+            CommandScheduler.getInstance().schedule(new OuttakeArmCommand(Outtake.ArmState.SCORING));
         }
 
         if (robot.outtake.armState == Outtake.ArmState.SCORING) {
-            robot.outtake.updateClawState(robot.gamepad2.getGamepadButton(GamepadKeys.Button.Y).get() ? Outtake.ClawState.OPENED : Outtake.ClawState.CLOSED);
+            robot.outtake.updateClawState(Gamepad2.getGamepadButton(GamepadKeys.Button.Y).get() ? Outtake.ClawState.OPENED : Outtake.ClawState.CLOSED);
         }
 
-        robot.outtake.moveSlides(robot.gamepad2.getLeftY());
-
-        robot.telemetry.addData("HZ", 1E9 / (System.nanoTime() - loopStamp));
-        loopStamp = System.nanoTime();
+        //robot.outtake.moveSlides(Gamepad2.getLeftY());
 
         if (Globals.telemetryEnable) {
+            //telemetry.addData("ROBOT HEADING", robot.odometry.getHeading());
+            telemetry.addData("HORIZONTAL SLIDE POS", robot.horizontalSlideActuator.getPosition() + " MM; " + robot.horizontalSlideActuator.profileOutput);
+            //telemetry.addData("OUTTAKE SLIDES POS", (15.5 + robot.outtake.getSlidesPosition()) + " IN");
+            //telemetry.addData("SAMPLE ANGLE", robot.sampleAlignmentPipeline.getSampleAngle());
+            telemetry.addData("HZ", 1E9 / (System.nanoTime() - loopStamp));
+            loopStamp = System.nanoTime();
             telemetry.update();
         }
     }
 
     @Override
-    public void onStop() {
-
+    public void reset() {
+        CommandScheduler.getInstance().reset();
+        //robot.logitechCam.stopStreaming();
+        //robot.logitechCam.closeCameraDevice();
     }
-
 }

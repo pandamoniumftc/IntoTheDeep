@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Robots;
+package org.firstinspires.ftc.teamcode.Hardware;
 
 public class Globals {
     public enum RobotAlliance {

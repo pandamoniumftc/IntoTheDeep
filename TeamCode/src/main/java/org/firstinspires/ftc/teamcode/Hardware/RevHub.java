@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Devices;
+package org.firstinspires.ftc.teamcode.Hardware;
 
 import static com.qualcomm.robotcore.util.Range.clip;
 
@@ -10,8 +10,6 @@ import com.qualcomm.hardware.lynx.LynxNackException;
 import com.qualcomm.hardware.lynx.commands.LynxMessage;
 import com.qualcomm.hardware.lynx.commands.LynxRespondable;
 import com.qualcomm.hardware.lynx.commands.core.LynxDekaInterfaceCommand;
-import com.qualcomm.hardware.lynx.commands.core.LynxGetBulkInputDataCommand;
-import com.qualcomm.hardware.lynx.commands.core.LynxGetBulkInputDataResponse;
 import com.qualcomm.hardware.lynx.commands.core.LynxI2cConfigureChannelCommand;
 import com.qualcomm.hardware.lynx.commands.core.LynxSetMotorChannelModeCommand;
 import com.qualcomm.hardware.lynx.commands.core.LynxSetMotorConstantPowerCommand;
@@ -26,14 +24,12 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.navigation.VoltageUnit;
-import org.firstinspires.ftc.teamcode.Util.PID;
-import org.firstinspires.ftc.teamcode.Util.MotionProfile;
 
 import java.util.concurrent.TimeUnit;
 
 public class RevHub extends LynxCommExceptionHandler implements RobotArmingStateNotifier.Callback {
     public LynxModule module;
-    LynxGetBulkInputDataResponse bulkData;
+    public LynxModule.BulkData bulkData;
     double voltage = 12.0;
     public boolean armed = false;
     ElapsedTime voltageTimer;
@@ -44,7 +40,6 @@ public class RevHub extends LynxCommExceptionHandler implements RobotArmingState
     public RevHub(HardwareMap hardwareMap, String revhub) {
         module = hardwareMap.get(LynxModule.class, revhub);
         module.registerCallback(this, true);
-        clearBulkData();
         updateBulkData();
 
         voltageTimer = new ElapsedTime();
@@ -61,13 +56,10 @@ public class RevHub extends LynxCommExceptionHandler implements RobotArmingState
         send(new LynxI2cConfigureChannelCommand(module, port, code));
     }
     public Motor getMotor(int port) {
-        return new Motor(this, abs(port));
+        return new Motor(this, port);
     }
-    public Motor getMotor(int port, Encoder enc, PID controller, MotionProfile profile, double scale) {
-        return new Motor(this, abs(port), enc, controller, profile, scale);
-    }
-    public Encoder getEncoder(int port, double counts) {
-        return new Encoder(this, abs(port), counts);
+    public Encoder getEncoder(int port) {
+        return new Encoder(this, port);
     }
     public Servo getServo(int port) {
         LynxSetServoConfigurationCommand cmd = new LynxSetServoConfigurationCommand(this.module,port,(int)PwmControl.PwmRange.usFrameDefault);
@@ -97,33 +89,20 @@ public class RevHub extends LynxCommExceptionHandler implements RobotArmingState
     }
     public void updateVoltage() {
         if (voltageTimer.time(TimeUnit.SECONDS) > 10) {
-            module.getInputVoltage(VoltageUnit.VOLTS);
+            voltage = module.getInputVoltage(VoltageUnit.VOLTS);
             voltageTimer.reset();
         }
     }
 
-    public double getVoltage() {
-        return voltage;
-    }
-
     public void updateBulkData() {
-        bulkData = (LynxGetBulkInputDataResponse) sendReceive(new LynxGetBulkInputDataCommand(module));
-    }
-
-    public void clearBulkData() {
-        if (module.getBulkCachingMode() == LynxModule.BulkCachingMode.MANUAL) {
-            module.clearBulkCache();
-        }
+        bulkData = module.getBulkData();
     }
 
     public void send(LynxRespondable message) {
         try {
             message.send();
         }
-        catch(InterruptedException e) {
-            e.printStackTrace();
-        }
-        catch(LynxNackException e) {
+        catch(InterruptedException | LynxNackException e) {
             e.printStackTrace();
         }
     }
@@ -132,10 +111,7 @@ public class RevHub extends LynxCommExceptionHandler implements RobotArmingState
         try {
             return message.sendReceive();
         }
-        catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        catch (LynxNackException e) {
+        catch (InterruptedException | LynxNackException e) {
             e.printStackTrace();
         }
         return null;
