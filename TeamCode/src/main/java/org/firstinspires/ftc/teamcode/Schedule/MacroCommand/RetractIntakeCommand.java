@@ -11,7 +11,7 @@ public class RetractIntakeCommand extends SequentialCommandGroup {
     public RetractIntakeCommand() {
         super(
                 new IntakeArmCommand(Intake.ArmState.TRANSFERING),
-                new WaitCommand(250),
+                new WaitCommand(300),
                 new HorizontalSlidesCommand(0)
         );
     }

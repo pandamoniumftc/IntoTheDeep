@@ -9,97 +9,63 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import java.util.concurrent.TimeUnit;
 
 public class MotionProfile {
-    public double initialPosition;
-    public double finalPosition;
-    public double distance;
-    public double t1, t2, t3;
-    public double totalTime;
-    public double t1_stop_position;
-    public double max_velocity;
-    public double t2_stop_position;
-    public boolean flipped = false;
-    public double originalPos = 0;
-    public double position = 0;
-
-    public double velo, accel;
-
-    public MotionProfile(double initialPosition, double finalPosition, double velo, double accel) {
-        if (finalPosition < initialPosition) {
-            flipped = true;
-            this.originalPos = initialPosition;
-            double temp = initialPosition;
-            initialPosition = finalPosition;
-            finalPosition = temp;
+    public double aMax, vMax, distance, initial, target;
+    public double acceleration_dt, deceleration_time, acceleration_distance, entire_dt, cruise_distance, cruise_dt;
+    public MotionProfile(double referencePosition, double referenceTarget, double max_velocity, double max_acceleration) {
+        this.initial = referencePosition;
+        this.target = referenceTarget;
+        this.distance = target - initial;
+        if (max_velocity <= 0 || max_acceleration <= 0) {
+            throw new IllegalArgumentException("Max velocity and acceleration must be greater than zero");
         }
-        this.initialPosition = initialPosition;
-        this.finalPosition = finalPosition;
-        this.distance = finalPosition - initialPosition;
-        this.velo = velo;
-        this.accel = accel;
+        this.vMax = max_velocity;
+        this.aMax = max_acceleration;
 
-        t1 = this.velo / this.accel;
-        t3 = t1;
-        t2 = Math.abs(distance) / this.velo - (t1 + t3) / 2;
+        acceleration_dt = vMax / aMax;
+        acceleration_distance = 0.5 * aMax * Math.pow(acceleration_dt, 2);
 
-        if (t2 < 0) {
-            this.t2 = 0;
-
-            double a = (this.accel / 2) * (1 - this.accel / -this.accel);
-            double c = -distance;
-
-            t1 = Math.sqrt(-4 * a * c) / (2 * a);
-            t3 = -(this.accel * t1) / -this.accel;
-            t1_stop_position = (this.accel * Math.pow(t1, 2)) / 2;
-
-            max_velocity = this.accel * t1;
-
-            t2_stop_position = t1_stop_position;
+        if (Math.abs(distance) < 2 * acceleration_distance) {
+            // Adjust for triangular profile
+            double adjustedAccelerationDistance = Math.abs(distance) / 2.0;
+            acceleration_dt = Math.sqrt(2 * adjustedAccelerationDistance / aMax);
+            acceleration_distance = adjustedAccelerationDistance;
+            cruise_distance = 0;
+            cruise_dt = 0;
         } else {
-            max_velocity = this.velo;
-            t1_stop_position = (this.velo * t1) / 2;
-            t2_stop_position = t1_stop_position + t2 * max_velocity;
+            // Full trapezoidal profile
+            cruise_distance = Math.abs(distance) - 2 * acceleration_distance;
+            cruise_dt = cruise_distance / vMax;
         }
 
-        totalTime = t1 + t2 + t3;
+        // calculate the time that we're at max velocity
+        cruise_distance = abs(distance) - 2 * acceleration_distance;
+        cruise_dt = cruise_distance / vMax;
+        double deceleration_dt = acceleration_dt;
+        deceleration_time = acceleration_dt + cruise_dt;
+
+        entire_dt = acceleration_dt + cruise_dt + deceleration_dt;
     }
-
     public double calculate(double time) {
-        double velocity, acceleration, stage_time;
-        if (time <= t1) {
-            stage_time = time;
-            acceleration = this.accel;
-            velocity = acceleration * stage_time;
-            position = velocity * stage_time / 2;
-        } else if (time <= t1 + t2) {
-            stage_time = time - t1;
-            acceleration = 0;
-            velocity = this.velo;
-            position = t1_stop_position + stage_time * velocity;
-        } else if (time <= totalTime) {
-            stage_time = time - t1 - t2;
-            acceleration = -this.accel;
-            velocity = max_velocity - stage_time * this.accel;
-            position = t2_stop_position + (max_velocity + velocity) / 2 * stage_time;
-        } else {
-            acceleration = 0;
-            velocity = 0;
-            position = finalPosition;
+        // if we're accelerating
+        if (time < acceleration_dt) {
+            return initial + signum(distance) * (0.5 * aMax * Math.pow(time, 2));
         }
 
-        if (time <= totalTime) {
-            if (flipped) {
-                position = originalPos - position;
-            } else {
-                position = initialPosition + position;
-            }
-        } else {
-            if (flipped) {
-                position = initialPosition;
-            } else {
-                position = originalPos + position;
-            }
+        // if we're cruising
+        else if (time < deceleration_time) {
+            return initial + signum(distance) * (acceleration_distance + vMax * (time - acceleration_dt));
         }
 
-        return position;
+        // if we're decelerating
+        else if (time < entire_dt) {
+            double d = time - deceleration_time;
+            // use the kinematic equations to calculate the instantaneous desired position
+            return initial + signum(distance) * (acceleration_distance + cruise_distance + vMax * d - 0.5 * aMax * Math.pow(d, 2));
+        }
+
+        // check if we're still in the motion profile
+        else {
+            return target;
+        }
     }
 }

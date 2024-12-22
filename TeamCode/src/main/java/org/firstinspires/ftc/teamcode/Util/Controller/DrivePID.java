@@ -29,14 +29,13 @@ public class DrivePID {
             pErr = p;
         }
 
-        double dt = timer.time(TimeUnit.SECONDS);
+        double dt = timer.time(TimeUnit.NANOSECONDS) / 1E9;
 
         i.plus(p.scale(ki).scale(dt));
 
         d = p.minus(pErr).div(dt);
 
         power = p.scale(kp).plus(i).plus(d.scale(kd));
-        power.normalize();
 
         pErr = p;
         timer.reset();

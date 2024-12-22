@@ -3,9 +3,12 @@ package org.firstinspires.ftc.teamcode.Hardware;
 import com.qualcomm.hardware.dfrobot.HuskyLens;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.navigation.VoltageUnit;
 import org.firstinspires.ftc.teamcode.Subsystem.CameraSystems.SampleAlignmentPipeline;
 import org.firstinspires.ftc.teamcode.Subsystem.Intake;
 import org.firstinspires.ftc.teamcode.Subsystem.Mecanum;
@@ -15,11 +18,14 @@ import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
 
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 public class Robot {
     // HUBS
     private HardwareMap hardwareMap;
     public RevHub controlHub, expansionHub;
+    ElapsedTime voltageTimer;
+    public double voltage = 12.0;
 
     // DRIVETRAIN
     public Mecanum drive;
@@ -39,12 +45,9 @@ public class Robot {
     public Servo outtakeClawServo, outtakePivotServo;
 
     // CAMERA
-    public HuskyLens huskyLens;
     public OpenCvCamera logitechCam;
     public SampleAlignmentPipeline sampleAlignmentPipeline;
-
     private static Robot instance = null;
-    private ArrayList<Subsystem> subsystems;
     public static Robot getInstance() {
         if (instance == null) {
             instance = new Robot();
@@ -56,73 +59,75 @@ public class Robot {
         hardwareMap = map;
 
         controlHub = new RevHub(hardwareMap, "Control Hub");
-        //expansionHub = new RevHub(hardwareMap, "Expansion Hub 2");
+        expansionHub = new RevHub(hardwareMap, "Expansion Hub 2");
 
         controlHub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
-        //expansionHub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        expansionHub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
 
         updateBulkCache();
 
         drive = new Mecanum();
         intake = new Intake();
         outtake = new Outtake();
-        subsystems = new ArrayList<>();
 
-        //subsystems.add(drive);
-        subsystems.add(intake);
-        //subsystems.add(outtake);
+        voltageTimer = new ElapsedTime();
 
-        /*odometry = hardwareMap.get(GoBildaPinpointDriver.class, "odo");
+        odometry = hardwareMap.get(GoBildaPinpointDriver.class, "odo");
 
-        odometry.setOffsets(-100, 100);
+        odometry.setOffsets(-55, 110);
         odometry.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_SWINGARM_POD);
-        odometry.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD, GoBildaPinpointDriver.EncoderDirection.FORWARD);*/
+        odometry.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.REVERSED, GoBildaPinpointDriver.EncoderDirection.FORWARD);
 
-        if (Globals.opMode == Globals.RobotOpMode.AUTO) {
-            //huskyLens = hardwareMap.get(HuskyLens.class, "h");
-        }
-        else {
-            int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-            logitechCam = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "cam"), cameraMonitorViewId);
-            sampleAlignmentPipeline = new SampleAlignmentPipeline();
-            logitechCam.setPipeline(sampleAlignmentPipeline);
-            logitechCam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener()
+        int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        logitechCam = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "cam"), cameraMonitorViewId);
+        sampleAlignmentPipeline = new SampleAlignmentPipeline();
+        logitechCam.setPipeline(sampleAlignmentPipeline);
+        logitechCam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener()
+        {
+            @Override
+            public void onOpened()
             {
-                @Override
-                public void onOpened()
-                {
-                    logitechCam.startStreaming(800,448, OpenCvCameraRotation.UPRIGHT);
-                }
+                logitechCam.startStreaming(800,448, OpenCvCameraRotation.UPRIGHT);
+            }
 
-                @Override
-                public void onError(int errorCode)
-                {
+            @Override
+            public void onError(int errorCode)
+            {
 
-                }
-            });
-        }
+            }
+        });
     }
 
     public void read() {
         updateBulkCache();
-        for (Subsystem s : subsystems) s.read();
+        intake.read();
+        outtake.read();
     }
 
     public void loop() {
         if (Globals.opMode == Globals.RobotOpMode.AUTO) {
-            //odometry.update();
-        } else {
-            //odometry.update(GoBildaPinpointDriver.readData.ONLY_UPDATE_HEADING);
+            odometry.update();
         }
-        for (Subsystem s : subsystems) s.loop();
+        else {
+            odometry.update(GoBildaPinpointDriver.readData.ONLY_UPDATE_HEADING);
+        }
+
+        if (voltageTimer.time(TimeUnit.SECONDS) > 10) {
+            voltage = controlHub.module.getInputVoltage(VoltageUnit.VOLTS);
+            voltageTimer.reset();
+        }
+        intake.loop();
+        outtake.loop();
     }
 
     public void write() {
-        for (Subsystem s : subsystems) s.write();
+        intake.write();
+        outtake.write();
+        drive.write();
     }
 
     public void updateBulkCache() {
         controlHub.updateBulkData();
-        //expansionHub.updateBulkData();
+        expansionHub.updateBulkData();
     }
 }

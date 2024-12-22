@@ -9,13 +9,19 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.lynx.LynxNackException;
 import com.qualcomm.hardware.lynx.commands.LynxMessage;
 import com.qualcomm.hardware.lynx.commands.LynxRespondable;
+import com.qualcomm.hardware.lynx.commands.LynxResponse;
 import com.qualcomm.hardware.lynx.commands.core.LynxDekaInterfaceCommand;
+import com.qualcomm.hardware.lynx.commands.core.LynxGetADCCommand;
+import com.qualcomm.hardware.lynx.commands.core.LynxGetADCResponse;
+import com.qualcomm.hardware.lynx.commands.core.LynxGetMotorChannelCurrentAlertLevelCommand;
+import com.qualcomm.hardware.lynx.commands.core.LynxGetMotorChannelCurrentAlertLevelResponse;
 import com.qualcomm.hardware.lynx.commands.core.LynxI2cConfigureChannelCommand;
 import com.qualcomm.hardware.lynx.commands.core.LynxSetMotorChannelModeCommand;
 import com.qualcomm.hardware.lynx.commands.core.LynxSetMotorConstantPowerCommand;
 import com.qualcomm.hardware.lynx.commands.core.LynxSetServoConfigurationCommand;
 import com.qualcomm.hardware.lynx.commands.core.LynxSetServoPulseWidthCommand;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.PwmControl;
 import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
@@ -32,7 +38,6 @@ public class RevHub extends LynxCommExceptionHandler implements RobotArmingState
     public LynxModule.BulkData bulkData;
     double voltage = 12.0;
     public boolean armed = false;
-    ElapsedTime voltageTimer;
     @Override
     public void onModuleStateChange(RobotArmingStateNotifier module, RobotArmingStateNotifier.ARMINGSTATE state) {
         armed = module.getArmingState() == RobotArmingStateNotifier.ARMINGSTATE.ARMED;
@@ -41,8 +46,6 @@ public class RevHub extends LynxCommExceptionHandler implements RobotArmingState
         module = hardwareMap.get(LynxModule.class, revhub);
         module.registerCallback(this, true);
         updateBulkData();
-
-        voltageTimer = new ElapsedTime();
     }
     public void setBulkCachingMode(LynxModule.BulkCachingMode mode) {
         module.setBulkCachingMode(mode);
@@ -87,12 +90,6 @@ public class RevHub extends LynxCommExceptionHandler implements RobotArmingState
     public Analog getAnalog(int port) {
         return new Analog(this, port);
     }
-    public void updateVoltage() {
-        if (voltageTimer.time(TimeUnit.SECONDS) > 10) {
-            voltage = module.getInputVoltage(VoltageUnit.VOLTS);
-            voltageTimer.reset();
-        }
-    }
 
     public void updateBulkData() {
         bulkData = module.getBulkData();
@@ -107,7 +104,7 @@ public class RevHub extends LynxCommExceptionHandler implements RobotArmingState
         }
     }
 
-    public LynxMessage sendReceive(LynxDekaInterfaceCommand message) {
+    public LynxMessage sendReceive(LynxResponse message) {
         try {
             return message.sendReceive();
         }

@@ -6,6 +6,7 @@ import static java.lang.Math.atan2;
 import org.firstinspires.ftc.teamcode.Hardware.Globals;
 import org.firstinspires.ftc.teamcode.Hardware.Robot;
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
@@ -34,20 +35,18 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
         Mat yellow = input.clone();
 
         Imgproc.cvtColor(color, color, Imgproc.COLOR_BGR2YCrCb);
-        Imgproc.cvtColor(yellow, yellow, Imgproc.COLOR_BGR2HLS);
+        Imgproc.cvtColor(yellow, yellow, Imgproc.COLOR_BGR2HSV);
 
-        //Core.inRange(yellow, new Scalar(20, 100, 100), new Scalar(255, 255, 255), yellow);
+        Core.inRange(yellow, new Scalar(60, 190, 100), new Scalar(120, 255, 255), yellow);
 
-        Core.inRange(color, new Scalar(0, 140, 0), new Scalar(255, 255, 180), dst);
-
-        /*if (Globals.alliance == Globals.RobotAlliance.BLUE) {
-
+        if (Globals.alliance == Globals.RobotAlliance.BLUE) {
+            Core.inRange(color, new Scalar(0, 130, 0), new Scalar(255, 255, 200), color);
         }
         else {
             Core.inRange(color,new Scalar(0, 0, 180), new Scalar(255, 140, 255), color);
-        }*/
+        }
 
-        //Core.bitwise_or(color, yellow, dst);
+        Core.bitwise_or(color, yellow, dst);
 
         List<MatOfPoint> contours = new ArrayList<>();
         Mat hierarchy = new Mat();
@@ -93,7 +92,7 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
             Imgproc.line(input, rect.center, new Point((points[2].x + points[3].x)/2, (points[2].y + points[3].y)/2), new Scalar(255,0,0));
         }
 
-        return dst;
+        return input;
     }
 
     private double calculateAngle(RotatedRect rotatedRect) {

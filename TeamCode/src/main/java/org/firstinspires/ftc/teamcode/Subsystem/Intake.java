@@ -4,6 +4,7 @@ import static com.qualcomm.robotcore.util.Range.clip;
 import static com.qualcomm.robotcore.util.Range.scale;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.teamcode.Hardware.Encoder;
 import org.firstinspires.ftc.teamcode.Hardware.Motor;
@@ -28,24 +29,24 @@ public class Intake extends Subsystem {
     public ClawState clawState;
     public ArmState armState;
     public double calculatedClawRotation;
-    private final double HORIZONTAL_SLIDE_MM_TO_TICKS = (0.58777633289987/255.0) * 384.5;
     public Intake() {
         robot = Robot.getInstance();
 
         robot.horizontalSlideActuator = new MotorActuator(
                 new Motor[] {
-                        robot.controlHub.getMotor(0)
+                        robot.expansionHub.getMotor(1)
                                 .setDirection(Motor.Direction.FORWARD)
                                 .setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
+                                .setDeadZone(0.1)
                 },
-                robot.controlHub.getEncoder(0)
-                        .setDirection(Encoder.Direction.REVERSE)
+                robot.expansionHub.getEncoder(1)
+                        .setDirection(Encoder.Direction.FORWARD)
         )
-                .setPIDController(2.0/1000.0, 8.0/10000.0, 0)
-                .setScale(HORIZONTAL_SLIDE_MM_TO_TICKS)
-                .setLimits(35, 250)
-                .setMotionProfile(127.0, 127.0)
-                .setTolerance(10);
+                .setPIDController(0.02, 0.0, 0.0)
+                .setLimits(0.0, 223.0)
+                .setMotionProfile(500, 800)
+                .setTolerance(5)
+        ;
 
         robot.intakeClawServo = robot.controlHub.getServo(4);
         robot.intakeRotateServo = robot.controlHub.getServo(5);
@@ -65,9 +66,6 @@ public class Intake extends Subsystem {
     @Override
     public void loop() {
         robot.horizontalSlideActuator.loop();
-        if (armState == ArmState.INTAKING) {
-            calculatedClawRotation = getRotatedClawPosition(robot.sampleAlignmentPipeline.getSampleAngle());
-        }
     }
 
     @Override
@@ -81,27 +79,25 @@ public class Intake extends Subsystem {
     }
     public void updateArmState(ArmState state) {
         this.armState = state;
-        // wrist: -.66 -> +.01
-        // elbow: +.27 -> +.04
         switch (armState) {
             case GRABBING:
-                setWristPosition(0.24);
+                setWristPosition(0.25);
                 setElbowPosition(0.79);
                 break;
             case INTAKING:
-                setWristPosition(0.17);
+                setWristPosition(0.19);
                 setElbowPosition(0.73);
                 robot.intakeRotateServo.setPosition(0.385);
                 break;
             case TRANSFERING:
-                setWristPosition(0.85);
-                setElbowPosition(0.48);
-                robot.intakeRotateServo.setPosition(0.3285);
+                setWristPosition(0.87); //.87
+                setElbowPosition(0.50); //.50
+                robot.intakeRotateServo.setPosition(0.443);
                 break;
             case DEFAULT:
-                setWristPosition(0.86);
+                setWristPosition(0.87);
                 setElbowPosition(0.54);
-                robot.intakeRotateServo.setPosition(0.3285);
+                robot.intakeRotateServo.setPosition(0.443);
                 break;
         }
     }
@@ -114,9 +110,5 @@ public class Intake extends Subsystem {
     private void setElbowPosition(double pos) {
         robot.intakeLeftElbowServo.setPosition(pos);
         robot.intakeRightElbowServo.setPosition(pos+0.04);
-    }
-
-    public double getRotatedClawPosition(double sampleAngle) {
-        return scale(sampleAngle, 0, 180, 0.4415, 0.3285);
     }
 }

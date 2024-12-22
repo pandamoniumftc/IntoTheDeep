@@ -9,20 +9,23 @@ import org.firstinspires.ftc.teamcode.Util.MotionProfile;
 import org.firstinspires.ftc.teamcode.Util.Controller.MotorPID;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 public class MotorActuator {
     private Motor[] motors;
     private Encoder encoder;
     private MotorPID controller;
     private MotionProfile profile;
-    public double power, profileOutput, scale = 1.0, velocity = 0.0, tolerance, target, lowerLimit = 0.0, upperLimit = 1.0;
+    public double power, profileOutput, velocity = 0.0, tolerance, target, lowerLimit = 0.0, upperLimit = 1.0;
     private int initial, position = 0;
     public boolean reached;
+    private double feedback = 0.0;
     ElapsedTime profileTimer;
     
     public MotorActuator(Motor[] m, Encoder enc) {
         motors = m;
         encoder = enc;
+        profileTimer = new ElapsedTime();
     }
 
     public void read() {
@@ -31,19 +34,13 @@ public class MotorActuator {
     }
 
     public void loop() {
-        if (profileTimer == null) {
-            profileTimer = new ElapsedTime();
-        }
+        profileOutput = profile.calculate(profileTimer.time(TimeUnit.NANOSECONDS) / 1E9);
 
-        if (profile != null) {
-            profileOutput = profile.calculate(profileTimer.time(TimeUnit.SECONDS));
-        }
-
-        power = controller.update(getPosition(), profile != null ? profileOutput : target);
+        power = controller.update(getPosition(), profileOutput) + feedback;
 
         power = clip(power, -1, 1);
 
-        reached = abs(target - getPosition()) < tolerance;
+        reached = abs(target - getPosition()) <= tolerance;
     }
 
     public void write() {
@@ -56,21 +53,27 @@ public class MotorActuator {
 
     public void setTargetPosition(double pos) {
         target = clip(pos, lowerLimit, upperLimit);
-        profile = new MotionProfile(getPosition(), target, profile.velo, profile.accel);
+        this.profile = new MotionProfile(getPosition(), target, this.profile.vMax, this.profile.aMax);
         profileTimer.reset();
     }
     public void setInitialPosition() {
         initial = position;
     }
     public double getPosition() {
-        return (position - initial) / scale;
+        return position - initial;
     }
     public double getVelocity() {
-        return velocity / scale;
+        return velocity;
     }
     public MotorActuator setPIDController(double kp, double ki, double kd) {
         if (controller == null) {
             this.controller = new MotorPID(kp, ki, kd);
+        }
+        return this;
+    }
+    public MotorActuator setPIDController(double kp, double ki, double kd, double alpha) {
+        if (controller == null) {
+            this.controller = new MotorPID(kp, ki, kd).setAlpha(alpha);
         }
         return this;
     }
@@ -81,10 +84,6 @@ public class MotorActuator {
         }
         return this;
     }
-    public MotorActuator setScale(double scale) {
-        this.scale = scale;
-        return this;
-    }
     public MotorActuator setTolerance(double tolerance) {
         this.tolerance = tolerance;
         return this;
@@ -92,6 +91,10 @@ public class MotorActuator {
     public MotorActuator setLimits(double lower, double upper) {
         lowerLimit = lower;
         upperLimit = upper;
+        return this;
+    }
+    public MotorActuator setConstantFeedback(double f) {
+        feedback = f;
         return this;
     }
 }

@@ -3,13 +3,14 @@ package org.firstinspires.ftc.teamcode.Hardware;
 import static com.qualcomm.robotcore.util.Range.clip;
 import static java.lang.Math.abs;
 
+import com.qualcomm.hardware.lynx.commands.core.LynxGetMotorChannelCurrentAlertLevelResponse;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
 public class Motor {
     private final RevHub hub;
     private final Robot robot;
     int motorPort;
-    public double power;
+    public double power, pPower, deadZone;
     public int motorSign = 1;
     public enum Direction {
         FORWARD,
@@ -22,9 +23,11 @@ public class Motor {
     }
 
     public void write(double power) {
-        this.power = power;
-        this.power *= (motorSign * 12.0 / robot.controlHub.voltage);
-        hub.setMotorPower(this.power, motorPort);
+        if (abs(power - pPower) > deadZone) {
+            this.power = power * (motorSign * 12.0 / robot.controlHub.voltage);
+            this.pPower = power;
+            hub.setMotorPower(this.power, motorPort);
+        }
     }
 
     public Motor setDirection(Direction direction) {
@@ -34,6 +37,11 @@ public class Motor {
 
     public Motor setRunModes(DcMotor.RunMode mode, DcMotor.ZeroPowerBehavior behavior) {
         hub.setMotorRunMode(motorPort, mode, behavior);
+        return this;
+    }
+
+    public Motor setDeadZone(double deadZone) {
+        this.deadZone = deadZone;
         return this;
     }
 }

@@ -3,9 +3,12 @@ package org.firstinspires.ftc.teamcode.Subsystem;
 import static com.qualcomm.robotcore.util.Range.clip;
 import static java.lang.Math.abs;
 import static java.lang.Math.cos;
+import static java.lang.Math.min;
 import static java.lang.Math.sin;
 import static java.lang.Math.max;
 
+import com.arcrobotics.ftclib.gamepad.GamepadEx;
+import com.arcrobotics.ftclib.gamepad.GamepadKeys;
 import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.arcrobotics.ftclib.geometry.Vector2d;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -16,27 +19,30 @@ import org.firstinspires.ftc.teamcode.Hardware.Subsystem;
 
 public class Mecanum extends Subsystem {
     private Robot robot;
-    public double[] power;
+    public double fl = 0.0, fr = 0.0, bl = 0.0, br = 0.0;
+    public Vector2d t, h;
     public Mecanum() {
         robot = Robot.getInstance();
 
-        robot.frontLeftMotor = robot.controlHub.getMotor(0)
+        robot.frontLeftMotor = robot.expansionHub.getMotor(2)
                 .setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
-                .setDirection(Motor.Direction.FORWARD);
+                .setDirection(Motor.Direction.FORWARD)
+                .setDeadZone(0.01);
 
-        robot.frontRightMotor = robot.controlHub.getMotor(0)
+        robot.frontRightMotor = robot.controlHub.getMotor(2)
                 .setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
-                .setDirection(Motor.Direction.REVERSE);
+                .setDirection(Motor.Direction.REVERSE)
+                .setDeadZone(0.01);
 
-        robot.backLeftMotor = robot.controlHub.getMotor(0)
+        robot.backLeftMotor = robot.controlHub.getMotor(3)
                 .setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
-                .setDirection(Motor.Direction.FORWARD);
+                .setDirection(Motor.Direction.FORWARD)
+                .setDeadZone(0.01);
 
         robot.backRightMotor = robot.controlHub.getMotor(0)
                 .setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
-                .setDirection(Motor.Direction.REVERSE);
-
-        power = new double[4];
+                .setDirection(Motor.Direction.REVERSE)
+                .setDeadZone(0.01);
     }
 
     @Override
@@ -51,37 +57,42 @@ public class Mecanum extends Subsystem {
 
     @Override
     public void write() {
-        robot.frontLeftMotor.write(power[0]);
-        robot.frontRightMotor.write(power[1]);
-        robot.backLeftMotor.write(power[2]);
-        robot.backRightMotor.write(power[3]);
+        robot.frontLeftMotor.write(fl);
+        robot.frontRightMotor.write(fr);
+        robot.backLeftMotor.write(bl);
+        robot.backRightMotor.write(br);
+    }
+
+    public void test(GamepadEx g) {
+        robot.frontLeftMotor.write(g.getGamepadButton(GamepadKeys.Button.DPAD_LEFT).get() ? 1 : 0);
+        robot.frontRightMotor.write(g.getGamepadButton(GamepadKeys.Button.DPAD_UP).get() ? 1 : 0);
+        robot.backLeftMotor.write(g.getGamepadButton(GamepadKeys.Button.DPAD_DOWN).get() ? 1 : 0);
+        robot.backRightMotor.write(g.getGamepadButton(GamepadKeys.Button.DPAD_RIGHT).get() ? 1 : 0);
     }
 
     public void moveRobot(Vector2d left, Vector2d right, double angle) {
-        Vector2d l = left.normalize();
-        l = l.rotateBy(-Math.toDegrees(angle));
+        double cosA = Math.cos(-angle);
+        double sinA = Math.sin(-angle);
+        double rx = left.getX() * cosA - left.getY() * sinA;
+        double ry = left.getX() * sinA + left.getY() * cosA;
 
-        double x = clip(l.getX(), -1, 1);
-        double y = clip(l.getY(), -1, 1);
+        double x = clip(rx, -1, 1);
+        double y = clip(ry, -1, 1);
         double r = clip(right.getX(), -1, 1);
 
-        power[0] = (y+x+r); // flm
-        power[1] = (y+x-r); // frm
-        power[2] = (y-x+r); // blm
-        power[3] = (y-x-r); // brm
+        double scale = min(1.0/(abs(x)+abs(y)+abs(r)),1.0);
 
-        double max = 1.0;
-        for (double pow : power) max = max(max, abs(pow));
-
-        if (max > 1) {
-            power[0] /= max;
-            power[1] /= max;
-            power[2] /= max;
-            power[3] /= max;
-        }
+        fl = (y+x+r) * scale; // flm
+        fr = (y-x-r) * scale; // frm
+        bl = (y-x+r) * scale; // blm
+        br = (y+x-r) * scale; // brm
     }
 
     public void stopRobot() {
         moveRobot(new Vector2d(), new Vector2d(), 0);
+    }
+
+    public String print() {
+        return fl + " " + fr + " " + bl + " " + br;
     }
 }

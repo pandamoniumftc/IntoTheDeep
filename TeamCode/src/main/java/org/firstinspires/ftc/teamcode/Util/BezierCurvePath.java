@@ -1,17 +1,18 @@
 package org.firstinspires.ftc.teamcode.Util;
 
-import static java.lang.Math.atan2;
+import static java.lang.Math.hypot;
 import static java.lang.Math.pow;
-import static java.lang.Math.sqrt;
 
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Vector2d;
 
 import org.apache.commons.math3.analysis.UnivariateFunction;
-import org.apache.commons.math3.analysis.solvers.BrentSolver;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+import org.apache.commons.math3.optim.OptimizationData;
+import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
+import org.apache.commons.math3.optim.univariate.BrentOptimizer;
+import org.apache.commons.math3.optim.univariate.SearchInterval;
+import org.apache.commons.math3.optim.univariate.UnivariateObjectiveFunction;
+import org.apache.commons.math3.optim.univariate.UnivariatePointValuePair;
 import org.opencv.core.Point;
 
 public class BezierCurvePath {
@@ -28,14 +29,14 @@ public class BezierCurvePath {
         FOLLOW
     }
     public HeadingBehavior headingBehavior;
-    private BrentSolver solver;
+    private BrentOptimizer solver;
     public BezierCurvePath(Pose2d P0, Point P1, Point P2, Pose2d P3, HeadingBehavior behavior) {
         this.P0 = P0;
         this.P1 = P1;
         this.P2 = P2;
         this.P3 = P3;
         headingBehavior = behavior;
-        solver = new BrentSolver();
+        solver = new BrentOptimizer(1e-5, 1e-10);
     }
     public Vector2d getPosition(double t) {
         double x = pow(1-t, 3) * P0.getX() + 3 * pow(1-t, 2) * t * P1.x + 3 * (1-t) * pow(t, 2) * P2.x + pow(t, 3) * P3.getX();
@@ -43,22 +44,23 @@ public class BezierCurvePath {
         return new Vector2d(x, y);
     }
     public Vector2d getFirstDerivative(double t) {
-        double x = -3 * pow(1-t, 2) * P0.getX() + 3 * (1-t) * (1-2*t) * P1.x + 3 * t * (2-t) * P2.x + 3 * pow(t, 2) * P3.getX();
-        double y = -3 * pow(1-t, 2) * P0.getY() + 3 * (1-t) * (1-2*t) * P1.y + 3 * t * (2-t) * P2.y + 3 * pow(t, 2) * P3.getY();
+        double x = 3 * Math.pow(1 - t, 2) * (P1.x - P0.getX())
+                + 6 * (1 - t) * t * (P2.x - P1.x)
+                + 3 * Math.pow(t, 2) * (P3.getX() - P2.x);
+        double y = 3 * Math.pow(1 - t, 2) * (P1.y - P0.getY())
+                + 6 * (1 - t) * t * (P2.y - P1.y)
+                + 3 * Math.pow(t, 2) * (P3.getY() - P2.y);
         return new Vector2d(x, y);
     }
     public Vector2d getSecondDerivative(double t) {
-        double x = 6 * (1-t) * P0.getX() + 6 * (1-3*t) * P1.x + 6 * (1-t) * P2.x + 6 * t * P3.getX();
-        double y = 6 * (1-t) * P0.getY() + 6 * (1-3*t) * P1.y + 6 * (1-t) * P2.y + 6 * t * P3.getY();
+        double x = 6 * (1 - t) * (P2.x - 2 * P1.x + P0.getX())
+                + 6 * t * (P3.getX() - 2 * P2.x + P1.x);
+        double y = 6 * (1 - t) * (P2.y - 2 * P1.y + P0.getY())
+                + 6 * t * (P3.getY() - 2 * P2.y + P1.y);
         return new Vector2d(x, y);
     }
-    /*
-        ( 1 + (dy/dx)^2 ) ^ (3/2)
-    r = ---------------------------
-               (d^2y/dx^2)
-     */
     public double getRadiusCurvature(double t) {
-        return pow(sqrt(1 + pow(getFirstDerivative(t).magnitude(), 2)), 3) / getSecondDerivative(t).magnitude();
+        return (pow(getFirstDerivative(t).magnitude(), 3)) / (getFirstDerivative(t).getX() * getSecondDerivative(t).getY() - getFirstDerivative(t).getY() * getSecondDerivative(t).getX());
     }
     public double getHeading(double t) {
         switch (headingBehavior) {
@@ -75,9 +77,9 @@ public class BezierCurvePath {
         UnivariateFunction distanceSquared = t -> {
             double x = getPosition(t).getX();
             double y = getPosition(t).getY();
-            return Math.pow(x - current.getX(), 2) + Math.pow(y - current.getY(), 2);
+            return hypot(x - current.getX(), y - current.getY());
         };
-        double t = solver.solve(1000, distanceSquared, 0.0, 1.0);
+        double t = solver.optimize(GoalType.MINIMIZE, new UnivariateObjectiveFunction(distanceSquared), new SearchInterval(0.0, 1.0)).getPoint();
         return getPosition(t);
     }
 }

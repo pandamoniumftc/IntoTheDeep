@@ -1,8 +1,14 @@
 package org.firstinspires.ftc.teamcode.Util;
 
 import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.normalizeRadians;
+import static java.lang.Math.hypot;
+
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.solvers.BrentSolver;
+import org.apache.commons.math3.optim.nonlinear.scalar.GoalType;
+import org.apache.commons.math3.optim.univariate.BrentOptimizer;
+import org.apache.commons.math3.optim.univariate.SearchInterval;
+import org.apache.commons.math3.optim.univariate.UnivariateObjectiveFunction;
 
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Vector2d;
@@ -10,19 +16,12 @@ import com.arcrobotics.ftclib.geometry.Vector2d;
 public class LinePath {
     public Pose2d P0, P1;
     public Vector2d pathVector;
-    public enum HeadingBehavior {
-        STATIC,
-        LINEAR,
-        FOLLOW
-    }
-    public HeadingBehavior headingBehavior;
-    private BrentSolver solver;
-    public LinePath(Pose2d P0, Pose2d P1, HeadingBehavior behavior) {
+    private BrentOptimizer solver;
+    public LinePath(Pose2d P0, Pose2d P1) {
         this.P0 = P0;
         this.P1 = P1;
-        headingBehavior = behavior;
         pathVector = new Vector2d(P1.getX() - P0.getX(), P1.getY() - P0.getY());
-        solver = new BrentSolver();
+        //solver = new BrentOptimizer(1e-5, 1e-10);
     }
 
     // returns x and y position based on parameter t
@@ -39,25 +38,17 @@ public class LinePath {
 
     // returns heading based on parameter t
     public double getHeading(double t) {
-        switch (headingBehavior) {
-            case STATIC:
-                return t == 1.0 ? P0.getHeading() : P1.getHeading();
-            case LINEAR:
-                return t * P1.getHeading() + (1 - t) * P0.getHeading();
-            case FOLLOW:
-                return t == 1.0 ? P1.getHeading() : normalizeRadians(pathVector.angle());
-        }
-        return 0;
+        return t * P1.getHeading() + (1 - t) * P0.getHeading();
     }
 
     // get closest position to robot's current position
-    public Vector2d getClosestPosition(Pose2d current) {
+    /*public Vector2d getClosestPosition(Pose2d current, double currT) {
         UnivariateFunction distanceSquared = t -> {
             double x = getPathPosition(t).getX();
             double y = getPathPosition(t).getY();
-            return Math.pow(x - current.getX(), 2) + Math.pow(y - current.getY(), 2);
+            return hypot(x - current.getX(), y - current.getY());
         };
-        double t = solver.solve(1000, distanceSquared, 0.0, 1.0);
+        double t = solver.optimize(GoalType.MINIMIZE, new UnivariateObjectiveFunction(distanceSquared), new SearchInterval(0.0, 1.0)).getPoint();
         return getPathPosition(t);
-    }
+    }*/
 }

@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.Schedule.DriveCommand;
 
-import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.normalizeRadians;
-
 import static java.lang.Math.PI;
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
@@ -10,32 +8,42 @@ import com.arcrobotics.ftclib.command.CommandBase;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Transform2d;
 import com.arcrobotics.ftclib.geometry.Vector2d;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Hardware.Robot;
 import org.firstinspires.ftc.teamcode.Util.Controller.DrivePID;
 import org.firstinspires.ftc.teamcode.Util.Controller.HeadingPID;
 import org.firstinspires.ftc.teamcode.Util.LinePath;
+import org.firstinspires.ftc.teamcode.Util.MotionProfile;
+
+import java.util.concurrent.TimeUnit;
 
 public class PositionCommand extends CommandBase {
     Robot robot;
     public Pose2d robotPose, targetPosition;
     public LinePath path;
-    public DrivePID tController = new DrivePID(1.5/10.0, 0.0, 0.0);
-    public HeadingPID hController = new HeadingPID(3*PI/4, PI/5.0, -PI/4);
-    public Vector2d pt = new Vector2d(), ph = new Vector2d();
-    public final double T_THRESHOLD = 0.5, H_THRESHOLD = 0.05;
-    public double tValue = 0.0;
-    public PositionCommand(Pose2d pos, LinePath.HeadingBehavior behavior) {
+    public DrivePID tController = new DrivePID(0.015, 0.004, 0.0);
+    public HeadingPID hController = new HeadingPID(1.5, 0.6, 0.0);
+    public MotionProfile profile;
+    public ElapsedTime profileTimer;
+    public Vector2d pt = new Vector2d(), ph = new Vector2d(), splinePosition = new Vector2d();
+    public final double T_THRESHOLD = 15.0, H_THRESHOLD = 0.02;
+    public double tValue = 0.0, splineHeading;
+    public boolean pushedOutOfPath = false;
+    public PositionCommand(Pose2d pos) {
         robot = Robot.getInstance();
-        robotPose = robot.odometry.getPosition();
         targetPosition = pos;
-        path = new LinePath(robotPose, targetPosition, behavior);
+        profile = new MotionProfile(0.0, 1.0, 1, 1);
+        profileTimer = new ElapsedTime();
     }
 
     @Override
     public void initialize() {
+        robotPose = robot.odometry.getPosition();
+        path = new LinePath(robotPose, targetPosition);
         tController.reInit();
         hController.reInit();
+        profileTimer.reset();
     }
 
     @Override
@@ -43,25 +51,41 @@ public class PositionCommand extends CommandBase {
         robotPose = robot.odometry.getPosition();
         Vector2d posVec = robot.odometry.getPositionVec();
 
-        // if pushed out of position, then prioritize closest point to path
-        if (abs(tController.p.magnitude()) > 3.0) {
-            pt = tController.update(posVec, path.getClosestPosition(robotPose));
-            ph = new Vector2d();
-        }
-        else {
-            // if near path then follows path normally
-            tValue += 0.05;
-            pt = tController.update(posVec, path.getPathPosition(tValue));
-            ph = hController.update(robotPose.getHeading(), path.getHeading(tValue));
+        /*if (!pushedOutOfPath) {
+            splinePosition = path.getPathPosition(tValue);
+            splineHeading = path.getHeading(tValue);
         }
 
-        robot.drive.moveRobot(pt.normalize(), ph.normalize(), robot.odometry.getHeading());
+        // if pushed out of position, then prioritize closest point to path
+        if (abs(tController.p.magnitude()) > 300.0 && !pushedOutOfPath) {
+            splinePosition = path.getClosestPosition(robotPose);
+            splineHeading = robotPose.getHeading();
+            pushedOutOfPath = true;
+        }
+        else {
+            tValue += 0.01;
+            tValue = Math.min(tValue, 1.0);
+            pushedOutOfPath = false;
+        }*/
+
+        tValue = profile.calculate(profileTimer.time(TimeUnit.NANOSECONDS) / 1E9);
+
+        splinePosition = path.getPathPosition(tValue);
+        robot.drive.t = splinePosition;
+        splineHeading = path.getHeading(tValue);
+
+        // if near path then follows path normally
+
+        pt = tController.update(posVec, splinePosition);
+        ph = hController.update(robotPose.getHeading(), splineHeading);
+
+        robot.drive.moveRobot(pt, ph, robot.odometry.getHeading());
     }
 
     @Override
     public boolean isFinished() {
-        Transform2d error = targetPosition.minus(robotPose);
-        return error.getTranslation().getNorm() < T_THRESHOLD && error.getRotation().getRadians() < H_THRESHOLD;
+        return targetPosition.minus(robotPose).getTranslation().getNorm() < T_THRESHOLD &&
+                Math.abs(targetPosition.getRotation().getRadians() - robotPose.getHeading()) < H_THRESHOLD;
     }
 
     @Override

@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.Util.Controller;
 
+import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.normalizeRadians;
 import static java.lang.Math.abs;
 
 import com.arcrobotics.ftclib.geometry.Vector2d;
@@ -29,13 +30,13 @@ public class HeadingPID {
             pErr = p;
         }
 
-        double dt = timer.time(TimeUnit.SECONDS);
+        double dt = timer.time(TimeUnit.NANOSECONDS) / 1E9;
 
         i += ki * p * dt;
 
         d = (p - pErr) / dt;
 
-        power = new Vector2d(p * kp + i + d * kd, 0).normalize();
+        power = new Vector2d(p * kp + i + d * kd, 0);
 
         pErr = p;
         timer.reset();

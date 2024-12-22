@@ -1,8 +1,10 @@
 package org.firstinspires.ftc.teamcode.Subsystem;
 
+import static java.lang.Math.abs;
+
 import com.qualcomm.robotcore.hardware.DcMotor;
 
-import org.firstinspires.ftc.teamcode.Hardware.Globals;
+import org.firstinspires.ftc.teamcode.Hardware.Encoder;
 import org.firstinspires.ftc.teamcode.Hardware.Motor;
 import org.firstinspires.ftc.teamcode.Hardware.MotorActuator;
 import org.firstinspires.ftc.teamcode.Hardware.Robot;
@@ -12,7 +14,8 @@ public class Outtake extends Subsystem {
     private Robot robot;
     public enum ArmState {
         TRANSFERING,
-        SCORING
+        SCORING_SAMPLE,
+        SCORING_SPECIMEN
     }
     public ArmState armState;
     public enum ClawState {
@@ -20,28 +23,30 @@ public class Outtake extends Subsystem {
         CLOSED
     }
     public ClawState clawState;
-    private final double VERTICAL_SLIDE_MM_TO_TICKS = 1;
     public Outtake() {
         robot = Robot.getInstance();
 
         robot.verticalSlidesActuator = new MotorActuator(
                 new Motor[] {
-                        robot.controlHub.getMotor(0)
-                                .setDirection(Motor.Direction.FORWARD)
-                                .setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE),
-                        robot.controlHub.getMotor(0)
+                        robot.controlHub.getMotor(1)
                                 .setDirection(Motor.Direction.FORWARD)
                                 .setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
+                                .setDeadZone(0.1),
+                        robot.expansionHub.getMotor(0)
+                                .setDirection(Motor.Direction.REVERSE)
+                                .setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
+                                .setDeadZone(0.05)
                 },
-                robot.controlHub.getEncoder(0)
+                robot.expansionHub.getEncoder(0).setDirection(Encoder.Direction.REVERSE)
         )
-                .setPIDController(0.95, 0.4, 0.0)
-                .setScale(VERTICAL_SLIDE_MM_TO_TICKS)
-                .setMotionProfile(3.5, 3.5)
-                .setTolerance(0.05);
+                .setPIDController(0.008, 0.0, 0.0)
+                .setLimits(0, 4500)
+                .setMotionProfile(6500, 6500)
+                .setTolerance(100)
+        ;
 
-        robot.outtakeClawServo = robot.controlHub.getServo(0);
-        robot.outtakePivotServo = robot.controlHub.getServo(0);
+        robot.outtakeClawServo = robot.expansionHub.getServo(1);
+        robot.outtakePivotServo = robot.expansionHub.getServo(2);
     }
 
     @Override
@@ -56,23 +61,28 @@ public class Outtake extends Subsystem {
 
     @Override
     public void write() {
-        if (Globals.opMode == Globals.RobotOpMode.AUTO) {
-            robot.verticalSlidesActuator.write();
-        }
+        robot.verticalSlidesActuator.write();
     }
 
     public void updateArmState(ArmState state) {
         this.armState = state;
-        robot.outtakePivotServo.setPosition(armState == ArmState.TRANSFERING ? 0 : 0.85);
+        switch (armState) {
+            case TRANSFERING:
+                robot.outtakePivotServo.setPosition(0.19);
+                break;
+            case SCORING_SAMPLE:
+                robot.outtakePivotServo.setPosition(0.65);
+                break;
+            case SCORING_SPECIMEN:
+                robot.outtakePivotServo.setPosition(0.85);
+                break;
+        }
     }
     public void updateClawState(ClawState state) {
         this.clawState = state;
-        robot.outtakeClawServo.setPosition(clawState == ClawState.CLOSED ? 0.65 : 1);
+        robot.outtakeClawServo.setPosition(clawState == ClawState.CLOSED ? 0.6 : 1);
     }
     public void moveSlides(double jInput) {
         robot.verticalSlidesActuator.write(jInput);
-    }
-    public double getSlidesPosition() {
-        return robot.verticalSlidesActuator.getPosition();
     }
 }

@@ -19,10 +19,10 @@ public class Encoder {
         return hub.bulkData.getMotorVelocity(port) * direction;
     }
     public int getCount() {
-        return hub.bulkData.getMotorCurrentPosition(port);
+        return hub.bulkData.getMotorCurrentPosition(port) * direction;
     }
     public Encoder setDirection(Direction direction) {
-        this.direction = direction == Direction.REVERSE ? -1 : 1;
+        this.direction = (direction == Direction.REVERSE) ? -1 : 1;
         return this;
     }
 }
