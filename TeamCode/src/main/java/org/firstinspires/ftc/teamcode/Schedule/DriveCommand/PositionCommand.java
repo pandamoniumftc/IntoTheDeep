@@ -22,19 +22,16 @@ public class PositionCommand extends CommandBase {
     Robot robot;
     public Pose2d robotPose, targetPosition;
     public LinePath path;
-    public DrivePID tController = new DrivePID(0.015, 0.004, 0.0);
-    public HeadingPID hController = new HeadingPID(1.5, 0.6, 0.0);
-    public MotionProfile profile;
+    public DrivePID tController = new DrivePID(0.015, 0.0, 0.0);
+    public HeadingPID hController = new HeadingPID(1.5, 0.0, 0.0);
     public ElapsedTime profileTimer;
     public Vector2d pt = new Vector2d(), ph = new Vector2d(), splinePosition = new Vector2d();
-    public final double T_THRESHOLD = 15.0, H_THRESHOLD = 0.02;
+    public final double T_THRESHOLD = 15.0, H_THRESHOLD = 0.05;
     public double tValue = 0.0, splineHeading;
     public boolean pushedOutOfPath = false;
     public PositionCommand(Pose2d pos) {
         robot = Robot.getInstance();
         targetPosition = pos;
-        profile = new MotionProfile(0.0, 1.0, 1, 1);
-        profileTimer = new ElapsedTime();
     }
 
     @Override
@@ -67,8 +64,6 @@ public class PositionCommand extends CommandBase {
             tValue = Math.min(tValue, 1.0);
             pushedOutOfPath = false;
         }*/
-
-        tValue = profile.calculate(profileTimer.time(TimeUnit.NANOSECONDS) / 1E9);
 
         splinePosition = path.getPathPosition(tValue);
         robot.drive.t = splinePosition;

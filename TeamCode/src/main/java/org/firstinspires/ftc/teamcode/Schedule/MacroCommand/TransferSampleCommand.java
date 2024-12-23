@@ -18,8 +18,8 @@ public class TransferSampleCommand extends SequentialCommandGroup {
                 new WaitUntilCommand(() -> Robot.getInstance().horizontalSlideActuator.reached),
                 new WaitCommand(100),
                 new OuttakeClawCommand(Outtake.ClawState.CLOSED),
+                new WaitCommand(100),
                 new IntakeClawCommand(Intake.ClawState.CLOSED),
-                new WaitCommand(250),
                 new IntakeArmCommand(Intake.ArmState.DEFAULT)
         );
     }

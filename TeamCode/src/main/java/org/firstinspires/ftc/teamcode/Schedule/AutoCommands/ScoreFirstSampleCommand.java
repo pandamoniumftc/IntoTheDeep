@@ -22,7 +22,7 @@ public class ScoreFirstSampleCommand extends SequentialCommandGroup {
     public ScoreFirstSampleCommand() {
         super(
                 new ParallelCommandGroup(
-                        new PositionCommand(new Pose2d(new Translation2d(-200, 300), new Rotation2d(-PI))),
+                        new PositionCommand(new Pose2d(new Translation2d(-200, 360), new Rotation2d(-PI))),
                         new VerticalSlidesCommand(0, false),
                         new OuttakeArmCommand(Outtake.ArmState.TRANSFERING)
                 ),

@@ -80,7 +80,7 @@ public class Outtake extends Subsystem {
     }
     public void updateClawState(ClawState state) {
         this.clawState = state;
-        robot.outtakeClawServo.setPosition(clawState == ClawState.CLOSED ? 0.6 : 1);
+        robot.outtakeClawServo.setPosition(clawState == ClawState.CLOSED ? 0.55 : 0.9);
     }
     public void moveSlides(double jInput) {
         robot.verticalSlidesActuator.write(jInput);

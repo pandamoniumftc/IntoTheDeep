@@ -22,12 +22,12 @@ public class ScoreSecondSampleCommand extends SequentialCommandGroup {
     public ScoreSecondSampleCommand() {
         super(
                 new ParallelCommandGroup(
-                        new PositionCommand(new Pose2d(new Translation2d(-450.0, 325), new Rotation2d(-PI))),
+                        new PositionCommand(new Pose2d(new Translation2d(-465.0, 350), new Rotation2d(-PI))),
                         new VerticalSlidesCommand(0, false),
                         new OuttakeArmCommand(Outtake.ArmState.TRANSFERING)
                 ),
                 new ExtendIntakeCommand(),
-                new WaitCommand(1000),
+                new WaitCommand(2000),
                 new GrabSampleCommand(),
                 new TransferSampleCommand(),
                 new PositionCommand(new Pose2d(new Translation2d(-375.0, 125), new Rotation2d(-3 * PI / 4))).alongWith(new VerticalSlidesCommand(3750, false)),

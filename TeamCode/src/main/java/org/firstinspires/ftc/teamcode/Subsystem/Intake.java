@@ -42,7 +42,7 @@ public class Intake extends Subsystem {
                 robot.expansionHub.getEncoder(1)
                         .setDirection(Encoder.Direction.FORWARD)
         )
-                .setPIDController(0.02, 0.0, 0.0)
+                .setPIDController(0.01, 0.0, 0.0)
                 .setLimits(0.0, 223.0)
                 .setMotionProfile(500, 800)
                 .setTolerance(5)

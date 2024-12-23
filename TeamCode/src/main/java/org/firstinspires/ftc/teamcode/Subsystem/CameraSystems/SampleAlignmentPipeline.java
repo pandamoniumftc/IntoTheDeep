@@ -27,23 +27,27 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
     Mat dst = new Mat();
     private double sampleAngle = 0.0;
     boolean viewportPaused;
+    Scalar yellowLower = new Scalar(60, 200, 100);
+    Scalar yellowUpper = new Scalar(120, 255, 255);
+    Scalar blueLower = new Scalar(0, 140, 0);
+    Scalar blueUpper = new Scalar(255, 255, 200);
+    Scalar redLower = new Scalar(0, 0, 180);
+    Scalar redUpper = new Scalar(255, 140, 255);
     @Override
     public Mat processFrame(Mat input) {
-        Imgproc.resize(input, input, new Size(80, (int) Math.round((80 / input.size().width) * input.size().height)));
+        Imgproc.resize(input, input, new Size(80, Math.round((80.0 / input.size().width) * input.size().height)));
 
-        Mat color = input.clone();
-        Mat yellow = input.clone();
+        Mat color = new Mat();
+        Mat yellow = new Mat();
+        Imgproc.cvtColor(input, color, Imgproc.COLOR_BGR2YCrCb);
+        Imgproc.cvtColor(input, yellow, Imgproc.COLOR_BGR2HSV);
 
-        Imgproc.cvtColor(color, color, Imgproc.COLOR_BGR2YCrCb);
-        Imgproc.cvtColor(yellow, yellow, Imgproc.COLOR_BGR2HSV);
-
-        Core.inRange(yellow, new Scalar(60, 190, 100), new Scalar(120, 255, 255), yellow);
+        Core.inRange(yellow, yellowLower, yellowUpper, yellow);
 
         if (Globals.alliance == Globals.RobotAlliance.BLUE) {
-            Core.inRange(color, new Scalar(0, 130, 0), new Scalar(255, 255, 200), color);
-        }
-        else {
-            Core.inRange(color,new Scalar(0, 0, 180), new Scalar(255, 140, 255), color);
+            Core.inRange(color, blueLower, blueUpper, color);
+        } else {
+            Core.inRange(color, redLower, redUpper, color);
         }
 
         Core.bitwise_or(color, yellow, dst);
@@ -52,29 +56,24 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
         Mat hierarchy = new Mat();
         Imgproc.findContours(dst, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        double minArea = 200.0; // Minimum area threshold
+        contours.removeIf(contour -> Imgproc.contourArea(contour) < 200.0);
+
         double minDistance = Double.MAX_VALUE;
         MatOfPoint closestSample = null;
 
         for (MatOfPoint contour : contours) {
-            // Approximate the contour to a polygon
             MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
             MatOfPoint2f approxCurve = new MatOfPoint2f();
             Imgproc.approxPolyDP(contour2f, approxCurve, 0.02 * Imgproc.arcLength(contour2f, true), true);
 
             Moments moments = Imgproc.moments(contour);
-
-            // Calculate the center of the contour
             double contourCenterX = moments.get_m10() / moments.get_m00();
             double contourCenterY = moments.get_m01() / moments.get_m00();
-            Point contourCenter = new Point(contourCenterX, contourCenterY);
+            double dx = contourCenterX - input.width() / 2.0;
+            double dy = contourCenterY;
+            double distance = dx * dx + dy * dy;
 
-            // Calculate the distance to the image center
-            double distance = Math.sqrt(Math.pow(contourCenter.x - (input.width() / 2.0), 2) +
-                    Math.pow(contourCenter.y, 2));
-
-            // Check if the approximated polygon has 4 sides and meets the area requirement
-            if ((approxCurve.total() >= 4 || approxCurve.total() <= 6) && Imgproc.contourArea(contour) > minArea && distance < minDistance) {
+            if (approxCurve.total() >= 4 && approxCurve.total() <= 6 && Imgproc.contourArea(contour) > 200.0 && distance < minDistance) {
                 minDistance = distance;
                 closestSample = new MatOfPoint(approxCurve.toArray());
             }
@@ -85,14 +84,15 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
             sampleAngle = calculateAngle(rect);
             Point[] points = new Point[4];
             rect.points(points);
-            for(int i=0; i<4; ++i){
-                Imgproc.line(input, points[i], points[(i+1)%4], new Scalar(0,0,255));
+
+            for (int i = 0; i < points.length; i++) {
+                Imgproc.line(input, points[i], points[(i + 1) % points.length], new Scalar(0, 0, 255));
             }
-            Imgproc.putText(input, String.valueOf(sampleAngle), rect.center, 3, 0.5, new Scalar(255, 255, 255));
-            Imgproc.line(input, rect.center, new Point((points[2].x + points[3].x)/2, (points[2].y + points[3].y)/2), new Scalar(255,0,0));
+
+            Imgproc.putText(input, String.valueOf(sampleAngle), rect.center, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(255, 255, 255));
         }
 
-        return input;
+        return dst;
     }
 
     private double calculateAngle(RotatedRect rotatedRect) {

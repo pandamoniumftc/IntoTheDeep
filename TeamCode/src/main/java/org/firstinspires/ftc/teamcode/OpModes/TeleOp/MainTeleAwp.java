@@ -27,7 +27,7 @@ import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
 public class MainTeleAwp extends CommandOpMode {
     Robot robot = Robot.getInstance();
     GamepadEx Gamepad1, Gamepad2;
-    final double MIN_MOTOR_POWER = 0.4;
+    final double MIN_MOTOR_POWER = 0.3;
     long loopStamp = 0L;
     boolean SpecimenScoringMode = false;
     @Override
@@ -40,6 +40,10 @@ public class MainTeleAwp extends CommandOpMode {
         Gamepad2 = new GamepadEx(gamepad2);
 
         robot.initialize(hardwareMap);
+
+        robot.read();
+        robot.horizontalSlideActuator.setInitialPosition();
+        robot.verticalSlidesActuator.setInitialPosition();
 
         robot.intake.updateClawState(Intake.ClawState.CLOSED);
         robot.intake.updateArmState(Intake.ArmState.DEFAULT);
