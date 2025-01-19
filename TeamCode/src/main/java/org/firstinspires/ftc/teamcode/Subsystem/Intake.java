@@ -1,61 +1,68 @@
 package org.firstinspires.ftc.teamcode.Subsystem;
 
 import static com.qualcomm.robotcore.util.Range.clip;
-import static com.qualcomm.robotcore.util.Range.scale;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 
-import org.firstinspires.ftc.teamcode.Hardware.Encoder;
-import org.firstinspires.ftc.teamcode.Hardware.Motor;
-import org.firstinspires.ftc.teamcode.Hardware.MotorActuator;
-import org.firstinspires.ftc.teamcode.Hardware.Robot;
-import org.firstinspires.ftc.teamcode.Hardware.Servo;
+import org.firstinspires.ftc.teamcode.Hardware.PandaAnalogEncoder;
+import org.firstinspires.ftc.teamcode.Hardware.PandaMotor;
+import org.firstinspires.ftc.teamcode.Hardware.PandaMotorActuator;
+import org.firstinspires.ftc.teamcode.Hardware.PandaMotorEncoder;
+import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
+import org.firstinspires.ftc.teamcode.Hardware.PandaServo;
+import org.firstinspires.ftc.teamcode.Hardware.PandaServoActuator;
 import org.firstinspires.ftc.teamcode.Hardware.Subsystem;
-import org.firstinspires.ftc.teamcode.Subsystem.CameraSystems.SampleAlignmentPipeline;
 
 public class Intake extends Subsystem {
-    private final Robot robot;
+    private final PandaRobot robot;
     public enum ClawState {
         OPENED,
         CLOSED
     }
     public enum ArmState {
         GRABBING,
-        INTAKING,
-        TRANSFERING,
+        TRANSFERRING,
         DEFAULT
+    }
+    public enum SlideState {
+        TRANSFERRING,
+        DEFAULT,
+        SCANNING_SAMPLE,
+        GRABBING_SAMPLE
     }
     public ClawState clawState;
     public ArmState armState;
-    public double calculatedClawRotation;
+    public SlideState slideState;
     public Intake() {
-        robot = Robot.getInstance();
+        robot = PandaRobot.getInstance();
 
-        robot.horizontalSlideActuator = new MotorActuator(
-                new Motor[] {
-                        robot.expansionHub.getMotor(1)
-                                .setDirection(Motor.Direction.FORWARD)
-                                .setRunModes(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
+        robot.horizontalSlideActuator = new PandaMotorActuator(
+                new PandaMotor[] {
+                        robot.expansionHub.getMotor(0)
+                                .setDirection(DcMotorSimple.Direction.REVERSE)
+                                .setConfigurations(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
                                 .setDeadZone(0.1)
                 },
-                robot.expansionHub.getEncoder(1)
-                        .setDirection(Encoder.Direction.FORWARD)
+                new PandaMotorEncoder(robot.expansionHub.getMotor(0).setDirection(DcMotorSimple.Direction.FORWARD))
         )
-                .setPIDController(0.01, 0.0, 0.0)
-                .setLimits(0.0, 223.0)
-                .setMotionProfile(500, 800)
-                .setTolerance(5)
-        ;
+                .setPIDController(0.013, 0.00015, 0.0001)
+                .setLimits(0.0, 180)
+                .setMotionProfile(320, 480)
+                .setTolerance(1);
 
-        robot.intakeClawServo = robot.controlHub.getServo(4);
-        robot.intakeRotateServo = robot.controlHub.getServo(5);
-        robot.intakeLeftWristServo = robot.controlHub.getServo(2);
-        robot.intakeRightWristServo = robot.controlHub.getServo(3)
-                .setDirection(Servo.Direction.REVERSE);
-        robot.intakeLeftElbowServo = robot.controlHub.getServo(0);
-        robot.intakeRightElbowServo = robot.controlHub.getServo(1)
-                .setDirection(Servo.Direction.REVERSE);
+        robot.intakeArmActuator = new PandaServoActuator(
+                new PandaServo[] {
+                        robot.expansionHub.getServo(0).setDirection(Servo.Direction.FORWARD),
+                        robot.controlHub.getServo(0).setDirection(Servo.Direction.REVERSE)
+                }
+        ).setOffset(new double[] {0.0, 0.0});
+
+        robot.intakeClawServo = robot.controlHub.getServo(2);
+        robot.intakeRotateClawServo = robot.controlHub.getServo(3); // 0* = 0.445, 90* = 0.383, 180* = 0.327
+        robot.intakeRotateArmServo = robot.controlHub.getServo(1);
+        robot.intakeLightChain = robot.expansionHub.getServo(3);
     }
 
     @Override
@@ -66,49 +73,53 @@ public class Intake extends Subsystem {
     @Override
     public void loop() {
         robot.horizontalSlideActuator.loop();
+        robot.intakeArmActuator.loop();
     }
 
     @Override
     public void write() {
         robot.horizontalSlideActuator.write();
+        robot.intakeArmActuator.write();
     }
 
     public void updateClawState(ClawState state) {
         this.clawState = state;
-        robot.intakeClawServo.setPosition((clawState == ClawState.OPENED) ? 0.79 : 0.57);
+        robot.intakeClawServo.setPosition((clawState == ClawState.OPENED) ? 0.73 : 0.60);
     }
     public void updateArmState(ArmState state) {
         this.armState = state;
         switch (armState) {
             case GRABBING:
-                setWristPosition(0.25);
-                setElbowPosition(0.79);
+                robot.intakeArmActuator.setPosition(0.76);
+                robot.intakeRotateArmServo.setPosition(0.06);
                 break;
-            case INTAKING:
-                setWristPosition(0.19);
-                setElbowPosition(0.73);
-                robot.intakeRotateServo.setPosition(0.385);
-                break;
-            case TRANSFERING:
-                setWristPosition(0.87); //.87
-                setElbowPosition(0.50); //.50
-                robot.intakeRotateServo.setPosition(0.443);
+            case TRANSFERRING:
+                robot.intakeArmActuator.setPosition(0.46);
+                robot.intakeRotateArmServo.setPosition(0.74);
+                robot.intakeRotateClawServo.setPosition(0.445);
                 break;
             case DEFAULT:
-                setWristPosition(0.87);
-                setElbowPosition(0.54);
-                robot.intakeRotateServo.setPosition(0.443);
+                robot.intakeArmActuator.setPosition(0.495);
+                robot.intakeRotateArmServo.setPosition(0.06);
+                robot.intakeRotateClawServo.setPosition(0.383);
                 break;
         }
     }
-
-    private void setWristPosition(double pos) {
-        robot.intakeLeftWristServo.setPosition(pos);
-        robot.intakeRightWristServo.setPosition(pos-0.1);
-    }
-
-    private void setElbowPosition(double pos) {
-        robot.intakeLeftElbowServo.setPosition(pos);
-        robot.intakeRightElbowServo.setPosition(pos+0.04);
+    public void updateSlideState(SlideState state) {
+        this.slideState = state;
+        switch (slideState) {
+            case TRANSFERRING:
+                robot.horizontalSlideActuator.setTargetPosition(0);
+                break;
+            case DEFAULT:
+                robot.horizontalSlideActuator.setTargetPosition(20);
+                break;
+            case SCANNING_SAMPLE:
+                robot.horizontalSlideActuator.setTargetPosition(160);
+                break;
+            case GRABBING_SAMPLE:
+                robot.horizontalSlideActuator.setTargetPosition(100);
+                break;
+        }
     }
 }

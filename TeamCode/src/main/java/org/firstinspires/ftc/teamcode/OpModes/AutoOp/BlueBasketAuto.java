@@ -9,12 +9,10 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Hardware.Globals;
-import org.firstinspires.ftc.teamcode.Hardware.Robot;
-import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.GoToBasketCommand;
+import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
 import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreFirstSampleCommand;
 import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreSecondSampleCommand;
 import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreSpecimenPreloadLeftSideCommand;
-import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreThirdSampleCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeArmCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeClawCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeArmCommand;
@@ -24,7 +22,7 @@ import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
 
 @Autonomous (name = "blue basket auto")
 public class BlueBasketAuto extends LinearOpMode {
-    private final Robot robot = Robot.getInstance();
+    private final PandaRobot robot = PandaRobot.getInstance();
     private final ElapsedTime timer = new ElapsedTime();
     private double loopTime = 0.0;
     @Override
@@ -43,12 +41,11 @@ public class BlueBasketAuto extends LinearOpMode {
 
         CommandScheduler.getInstance().schedule(
                 new SequentialCommandGroup(
-                        new IntakeArmCommand(Intake.ArmState.DEFAULT),
                         new IntakeClawCommand(Intake.ClawState.CLOSED),
                         new OuttakeArmCommand(Outtake.ArmState.TRANSFERING),
                         new OuttakeClawCommand(Outtake.ClawState.OPENED),
                         new WaitCommand(3000),
-                        new IntakeArmCommand(Intake.ArmState.TRANSFERING),
+                        new IntakeArmCommand(Intake.ArmState.TRANSFERRING),
                         new OuttakeClawCommand(Outtake.ClawState.CLOSED)
                 )
         );
@@ -86,7 +83,7 @@ public class BlueBasketAuto extends LinearOpMode {
             loopTime = loop;
         }
 
-        robot.logitechCam.stopStreaming();
-        robot.logitechCam.closeCameraDevice();
+        robot.oldAssCam.stopStreaming();
+        robot.oldAssCam.closeCameraDevice();
     }
 }

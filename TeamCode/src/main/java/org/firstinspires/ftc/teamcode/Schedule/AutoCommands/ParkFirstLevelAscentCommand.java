@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.Schedule.AutoCommands;
 
-import static org.firstinspires.ftc.teamcode.Util.BezierCurvePath.HeadingBehavior.LINEAR;
-
 import com.arcrobotics.ftclib.command.ParallelCommandGroup;
 import com.arcrobotics.ftclib.command.SequentialCommandGroup;
 import com.arcrobotics.ftclib.geometry.Pose2d;
@@ -14,7 +12,7 @@ import org.opencv.core.Point;
 public class ParkFirstLevelAscentCommand extends SequentialCommandGroup {
     public ParkFirstLevelAscentCommand() {
         super(
-                new SplineCommand(new Pose2d(), new Point(), new Point(), LINEAR),
+                new SplineCommand(new Pose2d(), new Point(), new Point()),
                 new OuttakeArmCommand(Outtake.ArmState.SCORING_SPECIMEN)
         );
     }

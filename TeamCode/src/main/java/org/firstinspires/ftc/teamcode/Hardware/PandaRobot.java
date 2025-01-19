@@ -1,10 +1,8 @@
 package org.firstinspires.ftc.teamcode.Hardware;
 
-import com.qualcomm.hardware.dfrobot.HuskyLens;
 import com.qualcomm.hardware.lynx.LynxModule;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -20,37 +18,41 @@ import org.openftc.easyopencv.OpenCvCameraRotation;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
-public class Robot {
+public class PandaRobot {
     // HUBS
     private HardwareMap hardwareMap;
-    public RevHub controlHub, expansionHub;
+    public PandaHub controlHub, expansionHub;
     ElapsedTime voltageTimer;
     public double voltage = 12.0;
 
     // DRIVETRAIN
     public Mecanum drive;
-    public Motor frontRightMotor, frontLeftMotor, backRightMotor, backLeftMotor;
+    public PandaMotor frontRightMotor, frontLeftMotor, backRightMotor, backLeftMotor;
 
     // LOCALIZER
     public GoBildaPinpointDriver odometry;
 
     // INTAKE
     public Intake intake;
-    public MotorActuator horizontalSlideActuator;
-    public Servo intakeClawServo, intakeRotateServo, intakeLeftWristServo, intakeRightWristServo, intakeLeftElbowServo, intakeRightElbowServo;
+    public PandaMotorActuator horizontalSlideActuator;
+    public PandaServoActuator intakeArmActuator;
+    public PandaServo intakeClawServo, intakeRotateClawServo, intakeRotateArmServo, intakeLightChain;
 
     // OUTTAKE
     public Outtake outtake;
-    public MotorActuator verticalSlidesActuator;
-    public Servo outtakeClawServo, outtakePivotServo;
+    public PandaMotorActuator verticalSlidesActuator;
+    public PandaServo outtakeClawServo, outtakePivotServo;
 
     // CAMERA
-    public OpenCvCamera logitechCam;
+    public OpenCvCamera oldAssCam;
     public SampleAlignmentPipeline sampleAlignmentPipeline;
-    private static Robot instance = null;
-    public static Robot getInstance() {
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    private ArrayList<Subsystem> subsystems;
+    private static PandaRobot instance = null;
+    public static PandaRobot getInstance() {
         if (instance == null) {
-            instance = new Robot();
+            instance = new PandaRobot();
         }
         return instance;
     }
@@ -58,17 +60,25 @@ public class Robot {
     public void initialize(HardwareMap map) {
         hardwareMap = map;
 
-        controlHub = new RevHub(hardwareMap, "Control Hub");
-        expansionHub = new RevHub(hardwareMap, "Expansion Hub 2");
+        for (LynxModule module : hardwareMap.getAll(LynxModule.class)) {
+            if (module.isParent() && LynxConstants.isEmbeddedSerialNumber(module.getSerialNumber())) {
+                controlHub = new PandaHub(map, module);
+            }
+            else {
+                expansionHub = new PandaHub(map, module);
+            }
+        }
 
-        controlHub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
-        expansionHub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
-
-        updateBulkCache();
+        //sampleSensor = new AsyncRev2MSensor(hardwareMap.get(Rev2mDistanceSensor.class, "sample"));
 
         drive = new Mecanum();
         intake = new Intake();
         outtake = new Outtake();
+        subsystems = new ArrayList<>();
+
+        subsystems.add(drive);
+        subsystems.add(intake);
+        subsystems.add(outtake);
 
         voltageTimer = new ElapsedTime();
 
@@ -79,15 +89,15 @@ public class Robot {
         odometry.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.REVERSED, GoBildaPinpointDriver.EncoderDirection.FORWARD);
 
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        logitechCam = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "cam"), cameraMonitorViewId);
+        oldAssCam = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "cam"), cameraMonitorViewId);
         sampleAlignmentPipeline = new SampleAlignmentPipeline();
-        logitechCam.setPipeline(sampleAlignmentPipeline);
-        logitechCam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener()
+        oldAssCam.setPipeline(sampleAlignmentPipeline);
+        oldAssCam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener()
         {
             @Override
             public void onOpened()
             {
-                logitechCam.startStreaming(800,448, OpenCvCameraRotation.UPRIGHT);
+                oldAssCam.startStreaming(160,120, OpenCvCameraRotation.UPRIGHT);
             }
 
             @Override
@@ -99,12 +109,9 @@ public class Robot {
     }
 
     public void read() {
-        updateBulkCache();
-        intake.read();
-        outtake.read();
-    }
+        controlHub.getLynxModule().clearBulkCache();
+        expansionHub.getLynxModule().clearBulkCache();
 
-    public void loop() {
         if (Globals.opMode == Globals.RobotOpMode.AUTO) {
             odometry.update();
         }
@@ -112,22 +119,20 @@ public class Robot {
             odometry.update(GoBildaPinpointDriver.readData.ONLY_UPDATE_HEADING);
         }
 
+
         if (voltageTimer.time(TimeUnit.SECONDS) > 10) {
-            voltage = controlHub.module.getInputVoltage(VoltageUnit.VOLTS);
+            voltage = controlHub.getLynxModule().getInputVoltage(VoltageUnit.VOLTS);
             voltageTimer.reset();
         }
-        intake.loop();
-        outtake.loop();
+
+        for (Subsystem system : subsystems) system.read();
+    }
+
+    public void loop() {
+        for (Subsystem system : subsystems) system.loop();
     }
 
     public void write() {
-        intake.write();
-        outtake.write();
-        drive.write();
-    }
-
-    public void updateBulkCache() {
-        controlHub.updateBulkData();
-        expansionHub.updateBulkData();
+        for (Subsystem system : subsystems) system.write();
     }
 }

@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.Schedule.AutoCommands;
 
-import static org.firstinspires.ftc.teamcode.Util.BezierCurvePath.HeadingBehavior.STATIC;
-
 import com.arcrobotics.ftclib.command.ParallelCommandGroup;
 import com.arcrobotics.ftclib.command.SequentialCommandGroup;
 import com.arcrobotics.ftclib.geometry.Pose2d;
@@ -17,7 +15,7 @@ public class GoToBasketCommand extends SequentialCommandGroup {
     public GoToBasketCommand() {
         super(
                 new ParallelCommandGroup(
-                        new SplineCommand(new Pose2d(), new Point(), new Point(), STATIC),
+                        new SplineCommand(new Pose2d(), new Point(), new Point()),
                         new VerticalSlidesCommand(0, false),
                         new OuttakeArmCommand(Outtake.ArmState.TRANSFERING)
                 )

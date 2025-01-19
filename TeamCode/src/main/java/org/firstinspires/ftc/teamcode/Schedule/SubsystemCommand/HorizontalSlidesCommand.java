@@ -2,19 +2,18 @@ package org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand;
 
 import static java.lang.Math.abs;
 
-import com.arcrobotics.ftclib.command.ConditionalCommand;
 import com.arcrobotics.ftclib.command.InstantCommand;
 import com.arcrobotics.ftclib.command.SequentialCommandGroup;
-import com.arcrobotics.ftclib.command.WaitCommand;
 import com.arcrobotics.ftclib.command.WaitUntilCommand;
 
-import org.firstinspires.ftc.teamcode.Hardware.Robot;
-import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
+import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
+import org.firstinspires.ftc.teamcode.Subsystem.Intake;
 
-public class HorizontalSlidesCommand extends InstantCommand {
-    public HorizontalSlidesCommand(double pos) {
+public class HorizontalSlidesCommand extends SequentialCommandGroup {
+    public HorizontalSlidesCommand(Intake.SlideState state, boolean wait) {
         super(
-                () -> Robot.getInstance().horizontalSlideActuator.setTargetPosition(pos)
+                new InstantCommand(() -> PandaRobot.getInstance().intake.updateSlideState(state)),
+                new WaitUntilCommand(() -> !wait || PandaRobot.getInstance().horizontalSlideActuator.reached)
         );
     }
 }
