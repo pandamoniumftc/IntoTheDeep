@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.OpModes.TeleOp;
 
-import com.arcrobotics.ftclib.command.Command;
-import com.arcrobotics.ftclib.command.CommandOpMode;
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.arcrobotics.ftclib.command.ConditionalCommand;
 import com.arcrobotics.ftclib.command.InstantCommand;
@@ -13,7 +12,6 @@ import com.arcrobotics.ftclib.geometry.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.Hardware.Globals;
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
 import org.firstinspires.ftc.teamcode.Schedule.MacroCommand.ScoreSpecimenCommand;
@@ -33,7 +31,7 @@ import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
 public class MainTeleAwp extends LinearOpMode {
     PandaRobot robot = PandaRobot.getInstance();
     GamepadEx Gamepad1, Gamepad2;
-    final double MIN_MOTOR_POWER = 0.3;
+    final double MIN_MOTOR_POWER = 0.25;
     long loopStamp = 0L;
     boolean SpecimenScoringMode = false;
     double pos = 0.5;
@@ -42,18 +40,11 @@ public class MainTeleAwp extends LinearOpMode {
         CommandScheduler.getInstance().reset();
 
         Globals.opMode = Globals.RobotOpMode.TELEOP;
-        Globals.alliance = Globals.RobotAlliance.BLUE;
 
         Gamepad1 = new GamepadEx(gamepad1);
         Gamepad2 = new GamepadEx(gamepad2);
 
         robot.initialize(hardwareMap);
-
-        robot.odometry.resetPosAndIMU();
-
-        robot.read();
-        robot.horizontalSlideActuator.setInitialPosition();
-        robot.verticalSlidesActuator.setInitialPosition();
 
         // extend and retracts intake arm
         Gamepad2.getGamepadButton(GamepadKeys.Button.B).
@@ -81,7 +72,7 @@ public class MainTeleAwp extends LinearOpMode {
                 );
 
         // switches between scoring modes
-        /*Gamepad2.getGamepadButton(GamepadKeys.Button.BACK).
+        Gamepad2.getGamepadButton(GamepadKeys.Button.BACK).
                 toggleWhenPressed(
                         new InstantCommand(() -> SpecimenScoringMode = true).alongWith(new OuttakeArmCommand(Outtake.ArmState.SCORING_SPECIMEN)),
                         new InstantCommand(() -> SpecimenScoringMode = false).alongWith(new OuttakeArmCommand(Outtake.ArmState.TRANSFERING))
@@ -90,15 +81,15 @@ public class MainTeleAwp extends LinearOpMode {
         Gamepad2.getGamepadButton(GamepadKeys.Button.X).
                 toggleWhenPressed(
                         new ConditionalCommand(
-                                new VerticalSlidesCommand(2000, true).andThen(new OuttakeArmCommand(Outtake.ArmState.SCORING_SPECIMEN)),
-                                new VerticalSlidesCommand(3750, true).andThen(new OuttakeArmCommand(Outtake.ArmState.SCORING_SAMPLE)),
+                                new VerticalSlidesCommand(Outtake.SlideState.HIGH_CHAMBER, true).andThen(new OuttakeArmCommand(Outtake.ArmState.SCORING_SPECIMEN)),
+                                new VerticalSlidesCommand(Outtake.SlideState.HIGH_BASKET, true).andThen(new OuttakeArmCommand(Outtake.ArmState.SCORING_SAMPLE)),
                                 () -> SpecimenScoringMode
                         )
                 );
 
         Gamepad2.getGamepadButton(GamepadKeys.Button.Y).
                 whenPressed(
-                        new VerticalSlidesCommand(0, false).andThen(
+                        new VerticalSlidesCommand(Outtake.SlideState.DEFAULT, false).andThen(
                                 new ConditionalCommand(
                                         new OuttakeArmCommand(Outtake.ArmState.SCORING_SPECIMEN),
                                         new OuttakeArmCommand(Outtake.ArmState.TRANSFERING),
@@ -120,7 +111,7 @@ public class MainTeleAwp extends LinearOpMode {
                                 new WaitCommand(0),
                                 () -> SpecimenScoringMode
                         )
-                );*/
+                );
 
         telemetry.addLine("Robot Initialized");
         telemetry.update();
@@ -129,7 +120,6 @@ public class MainTeleAwp extends LinearOpMode {
         CommandScheduler.getInstance().schedule(
                 new SequentialCommandGroup(
                         new IntakeClawCommand(Intake.ClawState.CLOSED),
-                        new HorizontalSlidesCommand(Intake.SlideState.TRANSFERRING, false),
                         new IntakeArmCommand(Intake.ArmState.DEFAULT),
                         new OuttakeClawCommand(Outtake.ClawState.OPENED),
                         new OuttakeArmCommand(Outtake.ArmState.TRANSFERING)
@@ -147,44 +137,49 @@ public class MainTeleAwp extends LinearOpMode {
 
         telemetry.clear();
 
+        FtcDashboard.getInstance().startCameraStream(robot.baseCam, 0);
+
+        CommandScheduler.getInstance().schedule(
+                new SequentialCommandGroup(
+                        new HorizontalSlidesCommand(Intake.SlideState.TRANSFERRING, false),
+                        new VerticalSlidesCommand(Outtake.SlideState.DEFAULT, false)
+                )
+        );
+
         while (opModeIsActive() && !isStopRequested()) {
             CommandScheduler.getInstance().run();
+
+            double scale = (1.0 - MIN_MOTOR_POWER) * (1.0 - Gamepad1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)) + MIN_MOTOR_POWER;
+
+            if (!robot.intake.adjusting) {
+                robot.drive.moveRobot(
+                        new Vector2d(Gamepad1.getLeftX(), Gamepad1.getLeftY()).scale(scale),
+                        new Vector2d(Gamepad1.getRightX(), Gamepad1.getRightY()).scale(scale),
+                        robot.odometry.getHeading()
+                );
+            }
+
             robot.read();
             robot.loop();
             robot.write();
 
-            double scale = (1.0 - MIN_MOTOR_POWER) * (1.0 - Gamepad1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)) + MIN_MOTOR_POWER;
-
-            //pos += Gamepad2.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER) * 1E-5;
-            //pos -= Gamepad2.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER) * 1E-5;
-
-            //robot.intakeRotateClawServo.setPosition(pos);
-
-            //robot.outtake.write(Gamepad2.getLeftY());
-
-            robot.drive.moveRobot(
-                    new Vector2d(Gamepad1.getLeftX(), Gamepad1.getLeftY()).scale(scale),
-                    new Vector2d(Gamepad1.getRightX(), Gamepad1.getRightY()).scale(scale),
-                    robot.odometry.getHeading()
-            );
-            //robot.drive.test(Gamepad1);
-
-            telemetry.addData("ROBOT HEADING", robot.odometry.getHeading());
-            telemetry.addData("INTAKE SLIDES POS", robot.horizontalSlideActuator.getPosition());
-            telemetry.addData("POS", robot.drive.sample);
-            //telemetry.addData("POWER", robot.drive.t.toString() + " " + robot.drive.h.toString());
+            //telemetry.addData("ROBOT HEADING", robot.odometry.getHeading());
+            //telemetry.addData("INTAKE SLIDES POS", robot.horizontalSlideActuator.getPosition());
+            //telemetry.addData("POS", robot.drive.sample);
+            telemetry.addData("POWER", robot.drive.t.toString() + " " + robot.drive.h.toString());
+            telemetry.addData("ADJUST", robot.intake.adjusting);
+            telemetry.addData("SAMPLE ANGLE", robot.drive.sample);
             //telemetry.addData("ROBOT POS", robot.odometry.getPosition().toString());
-            telemetry.addData("OUTTAKE SLIDES POS", robot.verticalSlidesActuator.profileOutput + " " + robot.verticalSlidesActuator.getPosition());
+            //telemetry.addData("OUTTAKE SLIDES POS", robot.verticalSlidesActuator.profileOutput + " " + robot.verticalSlidesActuator.getPosition());
             //telemetry.addData("SAMPLE ANGLE", robot.sampleAlignmentPipeline.getSampleAngle());
             //telemetry.addData("DISTANCE", robot.sampleSensor.getDistance(DistanceUnit.MM));
             //telemetry.addData("POWER", robot.drive.print());
-            //telemetry.addData("PWM", robot.intakeRotateArmServo.getServo().isPwmEnabled() + " " + robot.intakeRotateClawServo.getServo().isPwmEnabled());
             telemetry.addData("HZ", 1E9 / (System.nanoTime() - loopStamp));
             loopStamp = System.nanoTime();
             telemetry.update();
         }
 
-        //robot.logitechCam.stopStreaming();
-        //robot.logitechCam.closeCameraDevice();
+        robot.baseCam.stopStreaming();
+        robot.baseCam.closeCameraDevice();
     }
 }

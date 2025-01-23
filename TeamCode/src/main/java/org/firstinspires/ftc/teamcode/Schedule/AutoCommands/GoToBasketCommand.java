@@ -16,7 +16,7 @@ public class GoToBasketCommand extends SequentialCommandGroup {
         super(
                 new ParallelCommandGroup(
                         new SplineCommand(new Pose2d(), new Point(), new Point()),
-                        new VerticalSlidesCommand(0, false),
+                        new VerticalSlidesCommand(Outtake.SlideState.DEFAULT, false),
                         new OuttakeArmCommand(Outtake.ArmState.TRANSFERING)
                 )
         );

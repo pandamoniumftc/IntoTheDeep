@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.OpModes.AutoOp;
 
 import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.arcrobotics.ftclib.command.SequentialCommandGroup;
-import com.arcrobotics.ftclib.command.WaitCommand;
 import com.arcrobotics.ftclib.command.WaitUntilCommand;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
@@ -12,14 +11,10 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Hardware.Globals;
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
-import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreFirstSampleCommand;
-import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreSecondSampleCommand;
-import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreSpecimenPreloadLeftSideCommand;
 import org.firstinspires.ftc.teamcode.Schedule.DriveCommand.PositionCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeArmCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeClawCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeArmCommand;
-import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeClawCommand;
 import org.firstinspires.ftc.teamcode.Subsystem.Intake;
 import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
 
@@ -88,7 +83,7 @@ public class Test extends LinearOpMode {
             loopTime = loop;
         }
 
-        robot.oldAssCam.stopStreaming();
-        robot.oldAssCam.closeCameraDevice();
+        robot.baseCam.stopStreaming();
+        robot.baseCam.closeCameraDevice();
     }
 }

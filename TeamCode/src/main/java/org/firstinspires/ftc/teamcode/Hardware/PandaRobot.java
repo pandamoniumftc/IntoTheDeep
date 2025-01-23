@@ -14,6 +14,8 @@ import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
+import org.openftc.easyopencv.OpenCvInternalCamera;
+import org.openftc.easyopencv.OpenCvInternalCamera2;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
@@ -44,7 +46,7 @@ public class PandaRobot {
     public PandaServo outtakeClawServo, outtakePivotServo;
 
     // CAMERA
-    public OpenCvCamera oldAssCam;
+    public OpenCvCamera baseCam;
     public SampleAlignmentPipeline sampleAlignmentPipeline;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -89,15 +91,15 @@ public class PandaRobot {
         odometry.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.REVERSED, GoBildaPinpointDriver.EncoderDirection.FORWARD);
 
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
-        oldAssCam = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "cam"), cameraMonitorViewId);
+        baseCam = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "Webcam 1"), cameraMonitorViewId);
         sampleAlignmentPipeline = new SampleAlignmentPipeline();
-        oldAssCam.setPipeline(sampleAlignmentPipeline);
-        oldAssCam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener()
+        baseCam.setPipeline(sampleAlignmentPipeline);
+        baseCam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener()
         {
             @Override
             public void onOpened()
             {
-                oldAssCam.startStreaming(160,120, OpenCvCameraRotation.UPRIGHT);
+                baseCam.startStreaming(160,120, OpenCvCameraRotation.UPRIGHT);
             }
 
             @Override

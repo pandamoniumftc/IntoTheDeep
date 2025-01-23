@@ -9,7 +9,6 @@ import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
-import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.imgproc.Moments;
 import org.openftc.easyopencv.OpenCvPipeline;
@@ -20,14 +19,15 @@ import java.util.List;
 public class SampleAlignmentPipeline extends OpenCvPipeline {
     PandaRobot robot = PandaRobot.getInstance();
     Mat dst = new Mat();
-    private Point center = new Point();
+    private Point error = new Point();
     private double sampleAngle = 0.0;
+    private double area = 0.0;
     boolean viewportPaused;
-    Scalar yellowLower = new Scalar(60, 120, 0);
-    Scalar yellowUpper = new Scalar(100, 255, 255);
-    Scalar blueLower = new Scalar(0, 140, 0);
-    Scalar blueUpper = new Scalar(255, 255, 200);
-    Scalar redLower = new Scalar(0, 0, 180);
+    Scalar yellowLower = new Scalar(0, 0, 0);
+    Scalar yellowUpper = new Scalar(60, 255, 255);
+    Scalar blueLower = new Scalar(0, 130, 0);
+    Scalar blueUpper = new Scalar(255, 255, 180);
+    Scalar redLower = new Scalar(0, 0, 170);
     Scalar redUpper = new Scalar(255, 140, 255);
     /*Scalar yellowLower = new Scalar(60, 200, 100);
     Scalar yellowUpper = new Scalar(120, 255, 255);
@@ -37,7 +37,6 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
     Scalar redUpper = new Scalar(255, 140, 255);*/
     @Override
     public Mat processFrame(Mat input) {
-        Imgproc.resize(input, input, new Size(80, Math.round((80.0 / input.size().width) * input.size().height)));
 
         Mat color = new Mat();
         Mat yellow = new Mat();
@@ -58,16 +57,12 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
         Mat hierarchy = new Mat();
         Imgproc.findContours(dst, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        contours.removeIf(contour -> Imgproc.contourArea(contour) < 100.0);
+        contours.removeIf(contour -> Imgproc.contourArea(contour) < 200.0);
 
         double minDistance = Double.MAX_VALUE;
-        MatOfPoint closestSample = null;
+        MatOfPoint2f closestSample = null;
 
         for (MatOfPoint contour : contours) {
-            MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
-            MatOfPoint2f approxCurve = new MatOfPoint2f();
-            Imgproc.approxPolyDP(contour2f, approxCurve, 0.02 * Imgproc.arcLength(contour2f, true), true);
-
             Moments moments = Imgproc.moments(contour);
             double contourCenterX = moments.get_m10() / moments.get_m00();
             double contourCenterY = moments.get_m01() / moments.get_m00();
@@ -75,19 +70,20 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
             double dy = contourCenterY - input.height() / 2.0;
             double distance = dx * dx + dy * dy;
 
-            if (approxCurve.total() >= 4 && approxCurve.total() <= 6 && distance < minDistance) {
+            if (distance < minDistance) {
                 minDistance = distance;
-                closestSample = new MatOfPoint(approxCurve.toArray());
+                area = Imgproc.contourArea(contour);
+                closestSample = new MatOfPoint2f(contour.toArray());
             }
         }
 
         if (closestSample != null) {
-            RotatedRect rect = Imgproc.minAreaRect(new MatOfPoint2f(closestSample.toArray()));
+            RotatedRect rect = Imgproc.minAreaRect(closestSample);
             sampleAngle = calculateAngle(rect);
             Point[] points = new Point[4];
             rect.points(points);
 
-            center = rect.center;
+            error = new Point(input.width() / 2.0 - rect.center.x, input.height() / 2.0 - rect.center.y);
 
             for (int i = 0; i < points.length; i++) {
                 Imgproc.line(input, points[i], points[(i + 1) % points.length], new Scalar(0, 0, 255));
@@ -95,7 +91,8 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
 
             //Imgproc.putText(input, String.valueOf(sampleAngle), center, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(255, 255, 255));
 
-            Imgproc.putText(input, center.toString(), center, Imgproc.FONT_HERSHEY_SIMPLEX, 0.20, new Scalar(255, 255, 255));
+            //Imgproc.putText(input, center.toString(), center, Imgproc.FONT_HERSHEY_SIMPLEX, 0.20, new Scalar(255, 255, 255));
+            Imgproc.putText(input, error.toString(), error, Imgproc.FONT_HERSHEY_SIMPLEX, 0.20, new Scalar(0, 0, 0));
         }
 
         return input;
@@ -114,7 +111,7 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
         return sampleAngle;
     }
     public Point getSamplePosition() {
-        return center;
+        return error;
     }
     @Override
     public void onViewportTapped() {
@@ -134,11 +131,11 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
 
         if(viewportPaused)
         {
-            robot.oldAssCam.pauseViewport();
+            robot.baseCam.pauseViewport();
         }
         else
         {
-            robot.oldAssCam.resumeViewport();
+            robot.baseCam.resumeViewport();
         }
     }
 }

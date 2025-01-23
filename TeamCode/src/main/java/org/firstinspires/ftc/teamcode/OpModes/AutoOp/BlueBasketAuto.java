@@ -8,10 +8,11 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.Hardware.Globals;
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
-import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreFirstSampleCommand;
-import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreSecondSampleCommand;
 import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreSpecimenPreloadLeftSideCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeArmCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeClawCommand;
@@ -35,6 +36,8 @@ public class BlueBasketAuto extends LinearOpMode {
 
         robot.odometry.resetPosAndIMU();
 
+        robot.odometry.setPosition(new Pose2D(DistanceUnit.MM, 0.0, 10.0, AngleUnit.RADIANS, 0));
+
         robot.read();
         robot.horizontalSlideActuator.setInitialPosition();
         robot.verticalSlidesActuator.setInitialPosition();
@@ -42,10 +45,10 @@ public class BlueBasketAuto extends LinearOpMode {
         CommandScheduler.getInstance().schedule(
                 new SequentialCommandGroup(
                         new IntakeClawCommand(Intake.ClawState.CLOSED),
-                        new OuttakeArmCommand(Outtake.ArmState.TRANSFERING),
+                        new OuttakeArmCommand(Outtake.ArmState.SCORING_SAMPLE),
                         new OuttakeClawCommand(Outtake.ClawState.OPENED),
-                        new WaitCommand(3000),
                         new IntakeArmCommand(Intake.ArmState.TRANSFERRING),
+                        new WaitCommand(3000),
                         new OuttakeClawCommand(Outtake.ClawState.CLOSED)
                 )
         );
@@ -59,8 +62,8 @@ public class BlueBasketAuto extends LinearOpMode {
         CommandScheduler.getInstance().schedule(
                 new SequentialCommandGroup(
                         new ScoreSpecimenPreloadLeftSideCommand(),
-                        new ScoreFirstSampleCommand(),
-                        new ScoreSecondSampleCommand(),
+                        //new ScoreFirstSampleCommand(),
+                        //new ScoreSecondSampleCommand(),
                         //new ParkFirstLevelAscentCommand(),
                         new WaitUntilCommand(() -> timer.seconds() > 30)
                 )
@@ -83,7 +86,7 @@ public class BlueBasketAuto extends LinearOpMode {
             loopTime = loop;
         }
 
-        robot.oldAssCam.stopStreaming();
-        robot.oldAssCam.closeCameraDevice();
+        robot.baseCam.stopStreaming();
+        robot.baseCam.closeCameraDevice();
     }
 }

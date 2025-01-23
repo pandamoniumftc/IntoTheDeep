@@ -25,6 +25,14 @@ public class Outtake extends Subsystem {
         CLOSED
     }
     public ClawState clawState;
+    public enum SlideState {
+        DEFAULT,
+        HIGH_BASKET,
+        LOW_BASKET,
+        HIGH_CHAMBER,
+        LOW_CHAMBER
+    }
+    public SlideState slideState;
     public Outtake() {
         robot = PandaRobot.getInstance();
 
@@ -86,6 +94,25 @@ public class Outtake extends Subsystem {
     }
     public void updateClawState(ClawState state) {
         this.clawState = state;
-        robot.outtakeClawServo.setPosition(clawState == ClawState.CLOSED ? 0.7 : 1.0);
+        robot.outtakeClawServo.setPosition(clawState == ClawState.CLOSED ? 0.65 : 1.0);
+    }
+
+    public void updateSlideState(SlideState state) {
+        this.slideState = state;
+        switch (state) {
+            case DEFAULT:
+                robot.verticalSlidesActuator.setTargetPosition(0);
+                break;
+            case HIGH_BASKET:
+                robot.verticalSlidesActuator.setTargetPosition(3750);
+                break;
+            case LOW_BASKET:
+                break;
+            case HIGH_CHAMBER:
+                robot.verticalSlidesActuator.setTargetPosition(2000);
+                break;
+            case LOW_CHAMBER:
+                break;
+        }
     }
 }

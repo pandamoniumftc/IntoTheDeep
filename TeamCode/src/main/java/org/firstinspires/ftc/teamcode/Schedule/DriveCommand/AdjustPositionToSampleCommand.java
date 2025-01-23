@@ -10,22 +10,23 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
 import org.firstinspires.ftc.teamcode.Util.Controller.DrivePID;
 import org.firstinspires.ftc.teamcode.Util.Controller.HeadingPID;
+import org.firstinspires.ftc.teamcode.Util.Controller.PID;
 import org.firstinspires.ftc.teamcode.Util.LinePath;
 import org.opencv.core.Point;
 
 public class AdjustPositionToSampleCommand extends CommandBase {
     PandaRobot robot;
     public Point robotPoint;
-    public DrivePID xController = new DrivePID(2.25E-2, 0.0, 0.0);
-    public DrivePID yController = new DrivePID(2.25E-2, 0.0, 0.0);
-    public Vector2d px = new Vector2d(), py = new Vector2d(), ph = new Vector2d(), targetPosition = new Vector2d(43, 30);
-    public final double X_THRESHOLD = 3.0;
-    public final double Y_THRESHOLD = 3.0;
+    public PID xController = new PID(0.012, 0.0, 0.00);//2.25e-2,0,0
+    public PID yController = new PID(0.0095, 0.0, 0.00);//2.25e-2,0,0
+    public final double X_THRESHOLD = 5.0;
+    public final double Y_THRESHOLD = 5.0;
     public AdjustPositionToSampleCommand() {
         robot = PandaRobot.getInstance();
     }
     @Override
     public void initialize() {
+        robot.intake.adjusting = true;
         robotPoint = robot.sampleAlignmentPipeline.getSamplePosition();
         xController.reInit();
         yController.reInit();
@@ -36,10 +37,10 @@ public class AdjustPositionToSampleCommand extends CommandBase {
         robotPoint = robot.sampleAlignmentPipeline.getSamplePosition();
         robot.drive.sample = robotPoint;
 
-        px = xController.update(new Vector2d(robotPoint.x, 0.0), new Vector2d(targetPosition.getX(), 0.0));
-        py = yController.update(new Vector2d(0.0, robotPoint.y), new Vector2d(0.0, targetPosition.getY()));
+        double x = xController.update(robotPoint.x, 0.0);
+        double y = -yController.update(robotPoint.y, 0.0);
 
-        robot.drive.moveRobot(px.plus(py), ph, -PI);
+        robot.drive.moveRobot(new Vector2d(x, y), new Vector2d(), PI);
     }
 
     @Override
@@ -50,5 +51,6 @@ public class AdjustPositionToSampleCommand extends CommandBase {
     @Override
     public void end(boolean interrupted) {
         robot.drive.stopRobot();
+        robot.intake.adjusting = false;
     }
 }

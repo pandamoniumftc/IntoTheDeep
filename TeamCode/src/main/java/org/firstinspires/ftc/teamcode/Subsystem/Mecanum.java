@@ -16,11 +16,12 @@ import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
 import org.firstinspires.ftc.teamcode.Hardware.Subsystem;
 import org.opencv.core.Point;
 
+import java.util.Vector;
+
 public class Mecanum extends Subsystem {
     private PandaRobot robot;
     public double fl = 0.0, fr = 0.0, bl = 0.0, br = 0.0;
-    public double tValue;
-    public Vector2d t, h;
+    public Vector2d t = new Vector2d(), h = new Vector2d();
     public Point sample = new Point();
     public Mecanum() {
         robot = PandaRobot.getInstance();

@@ -15,7 +15,7 @@ public class ScoreSpecimenPreloadRightSideCommand extends SequentialCommandGroup
         super(
                 new ParallelCommandGroup(
                         new PositionCommand(new Pose2d()),
-                        new VerticalSlidesCommand(3000, true),
+                        new VerticalSlidesCommand(Outtake.SlideState.HIGH_CHAMBER, true),
                         new OuttakeArmCommand(Outtake.ArmState.SCORING_SAMPLE)
                 ),
                 new ScoreSpecimenCommand()

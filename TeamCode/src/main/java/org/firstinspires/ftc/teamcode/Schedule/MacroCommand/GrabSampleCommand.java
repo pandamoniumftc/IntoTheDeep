@@ -22,7 +22,7 @@ import org.firstinspires.ftc.teamcode.Subsystem.Intake;
 public class GrabSampleCommand extends SequentialCommandGroup {
     public GrabSampleCommand() {
         super(
-                //new AdjustPositionToSampleCommand(),
+                new AdjustPositionToSampleCommand(),
                 new InstantCommand(() -> PandaRobot.getInstance().intakeRotateClawServo.setPosition(scale(PandaRobot.getInstance().sampleAlignmentPipeline.getSampleAngle(), 0, 180, 0.445, 0.326))),
                 new HorizontalSlidesCommand(Intake.SlideState.GRABBING_SAMPLE, true),
                 new WaitCommand(1000),

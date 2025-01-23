@@ -35,6 +35,7 @@ public class Intake extends Subsystem {
     public ClawState clawState;
     public ArmState armState;
     public SlideState slideState;
+    public boolean adjusting = false;
     public Intake() {
         robot = PandaRobot.getInstance();
 
@@ -60,7 +61,7 @@ public class Intake extends Subsystem {
         ).setOffset(new double[] {0.0, 0.0});
 
         robot.intakeClawServo = robot.controlHub.getServo(2);
-        robot.intakeRotateClawServo = robot.controlHub.getServo(3); // 0* = 0.445, 90* = 0.383, 180* = 0.327
+        robot.intakeRotateClawServo = robot.controlHub.getServo(3); // 0* = 0.445, 90* = 0.384, 180* = 0.327
         robot.intakeRotateArmServo = robot.controlHub.getServo(1);
         robot.intakeLightChain = robot.expansionHub.getServo(3);
     }
@@ -84,7 +85,7 @@ public class Intake extends Subsystem {
 
     public void updateClawState(ClawState state) {
         this.clawState = state;
-        robot.intakeClawServo.setPosition((clawState == ClawState.OPENED) ? 0.73 : 0.60);
+        robot.intakeClawServo.setPosition((clawState == ClawState.OPENED) ? 0.73 : 0.54);
     }
     public void updateArmState(ArmState state) {
         this.armState = state;
@@ -99,9 +100,9 @@ public class Intake extends Subsystem {
                 robot.intakeRotateClawServo.setPosition(0.445);
                 break;
             case DEFAULT:
-                robot.intakeArmActuator.setPosition(0.495);
+                robot.intakeArmActuator.setPosition(0.49);
                 robot.intakeRotateArmServo.setPosition(0.06);
-                robot.intakeRotateClawServo.setPosition(0.383);
+                robot.intakeRotateClawServo.setPosition(0.384);
                 break;
         }
     }
@@ -118,7 +119,7 @@ public class Intake extends Subsystem {
                 robot.horizontalSlideActuator.setTargetPosition(160);
                 break;
             case GRABBING_SAMPLE:
-                robot.horizontalSlideActuator.setTargetPosition(100);
+                robot.horizontalSlideActuator.setTargetPosition(110);
                 break;
         }
     }

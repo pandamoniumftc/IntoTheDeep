@@ -9,7 +9,7 @@ import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
 public class ScoreSpecimenCommand extends SequentialCommandGroup {
     public ScoreSpecimenCommand() {
         super(
-                new VerticalSlidesCommand(1500, true),
+                //new VerticalSlidesCommand(1500, true),
                 new OuttakeClawCommand(Outtake.ClawState.OPENED)
         );
     }

@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.OpModes.AutoOp;
 
 import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.arcrobotics.ftclib.command.SequentialCommandGroup;
-import com.arcrobotics.ftclib.command.WaitCommand;
 import com.arcrobotics.ftclib.command.WaitUntilCommand;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
@@ -14,6 +13,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.Hardware.Globals;
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
 import org.firstinspires.ftc.teamcode.Schedule.DriveCommand.PositionCommand;
+import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.HorizontalSlidesCommand;
+import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeArmCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeClawCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeArmCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeClawCommand;
@@ -42,15 +43,18 @@ public class BlueSpecimenAuto extends LinearOpMode {
         CommandScheduler.getInstance().schedule(
                 new SequentialCommandGroup(
                         new IntakeClawCommand(Intake.ClawState.CLOSED),
-                        new OuttakeArmCommand(Outtake.ArmState.SCORING_SAMPLE),
+                        new HorizontalSlidesCommand(Intake.SlideState.TRANSFERRING, false),
+                        new IntakeArmCommand(Intake.ArmState.TRANSFERRING),
                         new OuttakeClawCommand(Outtake.ClawState.OPENED),
-                        new WaitCommand(2000),
-                        new OuttakeClawCommand(Outtake.ClawState.CLOSED)
+                        new OuttakeArmCommand(Outtake.ArmState.TRANSFERING)
                 )
         );
 
         while (opModeInInit()) {
             CommandScheduler.getInstance().run();
+            robot.read();
+            robot.loop();
+            robot.write();
             telemetry.addLine("Initializing...");
             telemetry.update();
         }
@@ -79,7 +83,7 @@ public class BlueSpecimenAuto extends LinearOpMode {
             loopTime = loop;
         }
 
-        robot.oldAssCam.stopStreaming();
-        robot.oldAssCam.closeCameraDevice();
+        robot.baseCam.stopStreaming();
+        robot.baseCam.closeCameraDevice();
     }
 }
