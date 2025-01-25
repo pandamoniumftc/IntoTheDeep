@@ -4,7 +4,6 @@ import static java.lang.Math.abs;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.Hardware.PandaMotor;
 import org.firstinspires.ftc.teamcode.Hardware.PandaMotorActuator;
@@ -41,11 +40,11 @@ public class Outtake extends Subsystem {
                         robot.controlHub.getMotor(0)
                                 .setDirection(DcMotorSimple.Direction.FORWARD)
                                 .setConfigurations(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
-                                .setDeadZone(0.05),
+                                .setCacheTolerance(0.05),
                         robot.expansionHub.getMotor(3)
                                 .setDirection(DcMotorSimple.Direction.REVERSE)
                                 .setConfigurations(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
-                                .setDeadZone(0.05)
+                                .setCacheTolerance(0.05)
                 },
                 new PandaMotorEncoder(robot.expansionHub.getMotor(3))
         )
@@ -53,6 +52,7 @@ public class Outtake extends Subsystem {
                 .setLimits(0, 4500)
                 .setMotionProfile(6500, 6500)
                 .setTolerance(100)
+                .setPowerThreshold(0.05)
         ;
 
         robot.outtakeClawServo = robot.controlHub.getServo(4);

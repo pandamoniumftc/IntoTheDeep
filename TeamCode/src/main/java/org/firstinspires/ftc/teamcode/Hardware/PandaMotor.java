@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.Hardware;
 import static com.qualcomm.robotcore.util.Range.clip;
 import static java.lang.Math.abs;
 
+import com.outoftheboxrobotics.photoncore.hardware.motor.PhotonAdvancedDcMotor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -11,42 +12,43 @@ import com.qualcomm.robotcore.hardware.HardwareDevice;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 
 public class PandaMotor implements HardwareDevice {
-    private DcMotorEx motor;
+    private PhotonAdvancedDcMotor motor;
     private final PandaRobot robot = PandaRobot.getInstance();
-    public double power, pPower, deadZone;
+    public double power;
     public PandaMotor(DcMotor motor) {
-        this.motor = (DcMotorEx) motor;
+        this.motor = (PhotonAdvancedDcMotor) motor;
     }
     public void write(double power) {
-        if (abs(power - pPower) > deadZone) {
-            this.power *= 12.0 / robot.voltage;
-            motor.setPower(power);
-            this.pPower = power;
-        }
+        this.power *= 12.0 / robot.voltage;
+        motor.setPower(power);
     }
 
     public PandaMotor setDirection(DcMotorSimple.Direction direction) {
-        motor.setDirection(direction);
+        motor.getMotor().setDirection(direction);
         return this;
     }
 
     public PandaMotor setConfigurations(DcMotor.RunMode mode, DcMotor.ZeroPowerBehavior behavior) {
-        motor.setMode(mode);
-        motor.setZeroPowerBehavior(behavior);
+        motor.getMotor().setMode(mode);
+        motor.getMotor().setZeroPowerBehavior(behavior);
         return this;
     }
 
-    public PandaMotor setDeadZone(double deadZone) {
-        this.deadZone = deadZone;
+    public boolean isStalled(double threshold) {
+        return abs(power) < threshold;
+    }
+
+    public PandaMotor setCacheTolerance(double tolerance) {
+        motor.setCacheTolerance(tolerance);
         return this;
     }
 
     public DcMotorEx getMotor() {
-        return motor;
+        return motor.getMotor();
     }
 
     public double getCurrent(CurrentUnit units) {
-        return motor.getCurrent(units);
+        return motor.getMotor().getCorrectedCurrent(units);
     }
 
     @Override
@@ -61,12 +63,12 @@ public class PandaMotor implements HardwareDevice {
 
     @Override
     public String getConnectionInfo() {
-        return motor.getConnectionInfo();
+        return motor.getMotor().getConnectionInfo();
     }
 
     @Override
     public int getVersion() {
-        return motor.getVersion();
+        return motor.getMotor().getVersion();
     }
 
     @Override

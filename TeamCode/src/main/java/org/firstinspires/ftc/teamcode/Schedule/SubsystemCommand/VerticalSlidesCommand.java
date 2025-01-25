@@ -11,7 +11,7 @@ public class VerticalSlidesCommand extends SequentialCommandGroup {
     public VerticalSlidesCommand(Outtake.SlideState state, boolean wait) {
         super(
                 new InstantCommand(() -> PandaRobot.getInstance().outtake.updateSlideState(state)),
-                new WaitUntilCommand(() -> !wait || PandaRobot.getInstance().verticalSlidesActuator.reached)
+                new WaitUntilCommand(() -> !wait || PandaRobot.getInstance().verticalSlidesActuator.isFinished())
         );
     }
 }

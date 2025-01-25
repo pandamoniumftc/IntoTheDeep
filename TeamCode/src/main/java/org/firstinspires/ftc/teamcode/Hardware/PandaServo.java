@@ -8,15 +8,11 @@ import com.qualcomm.robotcore.util.Range;
 
 public class PandaServo implements HardwareDevice {
     private ServoImplEx servo;
-    private double lastPos = 0.0;
     public PandaServo(Servo servo) {
         this.servo = (ServoImplEx) servo;
     }
     public void setPosition(double pos) {
-        if (Math.abs(pos - lastPos) > 0.001) {
-            servo.setPosition(pos);
-            lastPos = pos;
-        }
+        servo.setPosition(pos);
     }
     public PandaServo setDirection(Servo.Direction direction) {
         servo.setDirection(direction);

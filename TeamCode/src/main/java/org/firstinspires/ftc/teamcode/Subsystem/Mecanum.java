@@ -11,16 +11,16 @@ import com.arcrobotics.ftclib.geometry.Vector2d;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
-import org.firstinspires.ftc.teamcode.Hardware.PandaMotor;
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
 import org.firstinspires.ftc.teamcode.Hardware.Subsystem;
 import org.opencv.core.Point;
 
-import java.util.Vector;
+import java.util.Arrays;
 
 public class Mecanum extends Subsystem {
     private PandaRobot robot;
-    public double fl = 0.0, fr = 0.0, bl = 0.0, br = 0.0;
+    public double [] power = new double[4];
+    public final double MINIMUM_POWER_THRESHOLD = 0.1;
     public Vector2d t = new Vector2d(), h = new Vector2d();
     public Point sample = new Point();
     public Mecanum() {
@@ -29,22 +29,22 @@ public class Mecanum extends Subsystem {
         robot.frontLeftMotor = robot.expansionHub.getMotor(1)
                 .setConfigurations(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
                 .setDirection(DcMotorSimple.Direction.FORWARD)
-                .setDeadZone(0.01);
+                .setCacheTolerance(0.01);
 
         robot.frontRightMotor = robot.expansionHub.getMotor(2)
                 .setConfigurations(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
                 .setDirection(DcMotorSimple.Direction.REVERSE)
-                .setDeadZone(0.01);
+                .setCacheTolerance(0.01);
 
         robot.backLeftMotor = robot.controlHub.getMotor(2)
                 .setConfigurations(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
                 .setDirection(DcMotorSimple.Direction.FORWARD)
-                .setDeadZone(0.01);
+                .setCacheTolerance(0.01);
 
         robot.backRightMotor = robot.controlHub.getMotor(1)
                 .setConfigurations(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
                 .setDirection(DcMotorSimple.Direction.REVERSE)
-                .setDeadZone(0.01);
+                .setCacheTolerance(0.01);
     }
 
     @Override
@@ -59,10 +59,10 @@ public class Mecanum extends Subsystem {
 
     @Override
     public void write() {
-        robot.frontLeftMotor.write(fl);
-        robot.frontRightMotor.write(fr);
-        robot.backLeftMotor.write(bl);
-        robot.backRightMotor.write(br);
+        robot.frontLeftMotor.write(power[0]);
+        robot.frontRightMotor.write(power[1]);
+        robot.backLeftMotor.write(power[2]);
+        robot.backRightMotor.write(power[3]);
     }
 
     public void test(GamepadEx g) {
@@ -86,10 +86,14 @@ public class Mecanum extends Subsystem {
 
         double scale = min(1.0/(abs(x)+abs(y)+abs(r)),1.0);
 
-        fl = (y+x+r) * scale; // flm
-        fr = (y-x-r) * scale; // frm
-        bl = (y-x+r) * scale; // blm
-        br = (y+x-r) * scale; // brm
+        power[0] = (y+x+r) * scale; // flm
+        power[1] = (y-x-r) * scale; // frm
+        power[2] = (y-x+r) * scale; // blm
+        power[3] = (y+x-r) * scale; // brm
+    }
+
+    public boolean isStalled() {
+        return robot.frontLeftMotor.isStalled(MINIMUM_POWER_THRESHOLD) && robot.frontRightMotor.isStalled(MINIMUM_POWER_THRESHOLD) && robot.backLeftMotor.isStalled(MINIMUM_POWER_THRESHOLD) && robot.backRightMotor.isStalled(MINIMUM_POWER_THRESHOLD);
     }
 
     public void stopRobot() {
@@ -97,6 +101,6 @@ public class Mecanum extends Subsystem {
     }
 
     public String print() {
-        return fl + " " + fr + " " + bl + " " + br;
+        return Arrays.toString(power);
     }
 }

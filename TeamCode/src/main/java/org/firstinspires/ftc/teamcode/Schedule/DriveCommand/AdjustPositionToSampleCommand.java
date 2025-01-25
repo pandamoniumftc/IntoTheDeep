@@ -17,17 +17,16 @@ import org.opencv.core.Point;
 public class AdjustPositionToSampleCommand extends CommandBase {
     PandaRobot robot;
     public Point robotPoint;
-    public PID xController = new PID(0.012, 0.0, 0.00);//2.25e-2,0,0
-    public PID yController = new PID(0.0095, 0.0, 0.00);//2.25e-2,0,0
-    public final double X_THRESHOLD = 5.0;
-    public final double Y_THRESHOLD = 5.0;
+    public PID xController = new PID(0.0085, 0.0, 0.00);//2.25e-2,0,0
+    public PID yController = new PID(0.0060, 0.0, 0.00);//2.25e-2,0,0
+    public final double X_THRESHOLD = 10.0;
+    public final double Y_THRESHOLD = 10.0;
     public AdjustPositionToSampleCommand() {
         robot = PandaRobot.getInstance();
     }
     @Override
     public void initialize() {
         robot.intake.adjusting = true;
-        robotPoint = robot.sampleAlignmentPipeline.getSamplePosition();
         xController.reInit();
         yController.reInit();
     }
@@ -37,15 +36,15 @@ public class AdjustPositionToSampleCommand extends CommandBase {
         robotPoint = robot.sampleAlignmentPipeline.getSamplePosition();
         robot.drive.sample = robotPoint;
 
-        double x = xController.update(robotPoint.x, 0.0);
-        double y = -yController.update(robotPoint.y, 0.0);
+        double x = -xController.update(robotPoint.x, 0.0);
+        double y = yController.update(robotPoint.y, 0.0);
 
-        robot.drive.moveRobot(new Vector2d(x, y), new Vector2d(), PI);
+        robot.drive.moveRobot(new Vector2d(x, y), new Vector2d(), 0);
     }
 
     @Override
     public boolean isFinished() {
-        return xController.isFinished(X_THRESHOLD) && yController.isFinished(Y_THRESHOLD);
+        return xController.isFinished(X_THRESHOLD) && yController.isFinished(Y_THRESHOLD) && robot.drive.isStalled();
     }
 
     @Override

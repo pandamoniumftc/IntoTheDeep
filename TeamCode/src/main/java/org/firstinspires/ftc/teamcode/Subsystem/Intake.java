@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 
-import org.firstinspires.ftc.teamcode.Hardware.PandaAnalogEncoder;
 import org.firstinspires.ftc.teamcode.Hardware.PandaMotor;
 import org.firstinspires.ftc.teamcode.Hardware.PandaMotorActuator;
 import org.firstinspires.ftc.teamcode.Hardware.PandaMotorEncoder;
@@ -24,7 +23,8 @@ public class Intake extends Subsystem {
     public enum ArmState {
         GRABBING,
         TRANSFERRING,
-        DEFAULT
+        DEFAULT,
+        RETRACT
     }
     public enum SlideState {
         TRANSFERRING,
@@ -44,14 +44,15 @@ public class Intake extends Subsystem {
                         robot.expansionHub.getMotor(0)
                                 .setDirection(DcMotorSimple.Direction.REVERSE)
                                 .setConfigurations(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
-                                .setDeadZone(0.1)
+                                .setCacheTolerance(0.1)
                 },
                 new PandaMotorEncoder(robot.expansionHub.getMotor(0).setDirection(DcMotorSimple.Direction.FORWARD))
         )
                 .setPIDController(0.013, 0.00015, 0.0001)
                 .setLimits(0.0, 180)
                 .setMotionProfile(320, 480)
-                .setTolerance(1);
+                .setTolerance(1)
+                .setPowerThreshold(0.1);
 
         robot.intakeArmActuator = new PandaServoActuator(
                 new PandaServo[] {
@@ -85,13 +86,13 @@ public class Intake extends Subsystem {
 
     public void updateClawState(ClawState state) {
         this.clawState = state;
-        robot.intakeClawServo.setPosition((clawState == ClawState.OPENED) ? 0.73 : 0.54);
+        robot.intakeClawServo.setPosition((clawState == ClawState.OPENED) ? 0.68 : 0.54);
     }
     public void updateArmState(ArmState state) {
         this.armState = state;
         switch (armState) {
             case GRABBING:
-                robot.intakeArmActuator.setPosition(0.76);
+                robot.intakeArmActuator.setPosition(0.765);
                 robot.intakeRotateArmServo.setPosition(0.06);
                 break;
             case TRANSFERRING:
@@ -100,9 +101,13 @@ public class Intake extends Subsystem {
                 robot.intakeRotateClawServo.setPosition(0.445);
                 break;
             case DEFAULT:
-                robot.intakeArmActuator.setPosition(0.49);
+                robot.intakeArmActuator.setPosition(0.48);
                 robot.intakeRotateArmServo.setPosition(0.06);
-                robot.intakeRotateClawServo.setPosition(0.384);
+                robot.intakeRotateClawServo.setPosition(0.3835);
+                break;
+            case RETRACT:
+                robot.intakeArmActuator.setPosition(0.48);
+                robot.intakeRotateArmServo.setPosition(0.06);
                 break;
         }
     }
@@ -119,7 +124,7 @@ public class Intake extends Subsystem {
                 robot.horizontalSlideActuator.setTargetPosition(160);
                 break;
             case GRABBING_SAMPLE:
-                robot.horizontalSlideActuator.setTargetPosition(110);
+                robot.horizontalSlideActuator.setTargetPosition(100);
                 break;
         }
     }

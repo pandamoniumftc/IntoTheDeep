@@ -16,8 +16,8 @@ public class PandaMotorActuator {
     private MotorPID controller;
     private MotionProfile profile;
     public double power, profileOutput;
-    private double initial, velocity = 0.0, position = 0.0, lowerLimit = 0.0, upperLimit = 1.0, tolerance, target;
-    public boolean reached;
+    private double initial, velocity = 0.0, position = 0.0, lowerLimit = 0.0, upperLimit = 1.0, tolerance, target, threshold;
+    public boolean reached, stalled;
     private double feedback = 0.0;
     ElapsedTime profileTimer;
 
@@ -45,6 +45,14 @@ public class PandaMotorActuator {
             power = controller.update(getPosition(), profileOutput) + feedback;
 
             power = clip(power, -1, 1);
+
+            for (PandaMotor motor : devices) {
+                if (abs(motor.power) > threshold) {
+                    stalled = false;
+                    break;
+                }
+                stalled = true;
+            }
 
             reached = abs(target - getPosition()) <= tolerance;
         }
@@ -101,6 +109,10 @@ public class PandaMotorActuator {
         this.tolerance = tolerance;
         return this;
     }
+    public PandaMotorActuator setPowerThreshold(double threshold) {
+        this.threshold = threshold;
+        return this;
+    }
     public PandaMotorActuator setLimits(double lower, double upper) {
         lowerLimit = lower;
         upperLimit = upper;
@@ -109,5 +121,8 @@ public class PandaMotorActuator {
     public PandaMotorActuator setConstantFeedback(double f) {
         feedback = f;
         return this;
+    }
+    public boolean isFinished() {
+        return reached && stalled;
     }
 }

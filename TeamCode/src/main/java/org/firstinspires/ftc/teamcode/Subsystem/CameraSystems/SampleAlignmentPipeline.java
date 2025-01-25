@@ -9,6 +9,7 @@ import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.imgproc.Moments;
 import org.openftc.easyopencv.OpenCvPipeline;
@@ -19,16 +20,19 @@ import java.util.List;
 public class SampleAlignmentPipeline extends OpenCvPipeline {
     PandaRobot robot = PandaRobot.getInstance();
     Mat dst = new Mat();
+    Mat color = new Mat();
+    Mat yellow = new Mat();
+    Mat hierarchy = new Mat();
     private Point error = new Point();
     private double sampleAngle = 0.0;
-    private double area = 0.0;
+    public static double lowerHue = 0.0, lowerSat = 0.0, lowerVal = 0.0, upperHue = 255.0, upperSat = 255.0, upperVal = 255.0;
     boolean viewportPaused;
-    Scalar yellowLower = new Scalar(0, 0, 0);
-    Scalar yellowUpper = new Scalar(60, 255, 255);
+    Scalar yellowLower = new Scalar(60, 0, 200);
+    Scalar yellowUpper = new Scalar(120, 255, 255);
     Scalar blueLower = new Scalar(0, 130, 0);
-    Scalar blueUpper = new Scalar(255, 255, 180);
-    Scalar redLower = new Scalar(0, 0, 170);
-    Scalar redUpper = new Scalar(255, 140, 255);
+    Scalar blueUpper = new Scalar(255, 255, 255);
+    Scalar redLower = new Scalar(60, 120, 40);
+    Scalar redUpper = new Scalar(130, 255, 255);
     /*Scalar yellowLower = new Scalar(60, 200, 100);
     Scalar yellowUpper = new Scalar(120, 255, 255);
     Scalar blueLower = new Scalar(0, 140, 0);
@@ -37,9 +41,8 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
     Scalar redUpper = new Scalar(255, 140, 255);*/
     @Override
     public Mat processFrame(Mat input) {
+        Imgproc.resize(input, input, new Size(90.0 * input.height() / input.width(), 90.0));
 
-        Mat color = new Mat();
-        Mat yellow = new Mat();
         Imgproc.cvtColor(input, color, Imgproc.COLOR_BGR2YCrCb);
         Imgproc.cvtColor(input, yellow, Imgproc.COLOR_BGR2HSV);
 
@@ -54,15 +57,18 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
         Core.bitwise_or(color, yellow, dst);
 
         List<MatOfPoint> contours = new ArrayList<>();
-        Mat hierarchy = new Mat();
         Imgproc.findContours(dst, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        contours.removeIf(contour -> Imgproc.contourArea(contour) < 200.0);
+        contours.removeIf(contour -> Imgproc.contourArea(contour) < 100.0);
 
         double minDistance = Double.MAX_VALUE;
         MatOfPoint2f closestSample = null;
 
         for (MatOfPoint contour : contours) {
+            MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
+            MatOfPoint2f approxCurve = new MatOfPoint2f();
+            Imgproc.approxPolyDP(contour2f, approxCurve, 0.02 * Imgproc.arcLength(contour2f, true), true);
+
             Moments moments = Imgproc.moments(contour);
             double contourCenterX = moments.get_m10() / moments.get_m00();
             double contourCenterY = moments.get_m01() / moments.get_m00();
@@ -70,9 +76,8 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
             double dy = contourCenterY - input.height() / 2.0;
             double distance = dx * dx + dy * dy;
 
-            if (distance < minDistance) {
+            if (approxCurve.total() >= 4 && approxCurve.total() <= 6 && distance < minDistance) {
                 minDistance = distance;
-                area = Imgproc.contourArea(contour);
                 closestSample = new MatOfPoint2f(contour.toArray());
             }
         }
@@ -92,8 +97,12 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
             //Imgproc.putText(input, String.valueOf(sampleAngle), center, Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(255, 255, 255));
 
             //Imgproc.putText(input, center.toString(), center, Imgproc.FONT_HERSHEY_SIMPLEX, 0.20, new Scalar(255, 255, 255));
-            Imgproc.putText(input, error.toString(), error, Imgproc.FONT_HERSHEY_SIMPLEX, 0.20, new Scalar(0, 0, 0));
+            Imgproc.putText(input, error.toString(), rect.center, Imgproc.FONT_HERSHEY_SIMPLEX, 0.20, new Scalar(0, 0, 0));
         }
+
+        color.release();
+        yellow.release();
+        hierarchy.release();
 
         return input;
     }

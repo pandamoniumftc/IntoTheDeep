@@ -1,11 +1,13 @@
 package org.firstinspires.ftc.teamcode.Hardware;
 
+import com.outoftheboxrobotics.photoncore.hardware.PhotonLynxVoltageSensor;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
 import org.firstinspires.ftc.robotcore.external.navigation.VoltageUnit;
 import org.firstinspires.ftc.teamcode.Subsystem.CameraSystems.SampleAlignmentPipeline;
 import org.firstinspires.ftc.teamcode.Subsystem.Intake;
@@ -16,6 +18,7 @@ import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
 import org.openftc.easyopencv.OpenCvInternalCamera;
 import org.openftc.easyopencv.OpenCvInternalCamera2;
+import org.openftc.easyopencv.OpenCvWebcam;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +27,7 @@ public class PandaRobot {
     // HUBS
     private HardwareMap hardwareMap;
     public PandaHub controlHub, expansionHub;
+    PhotonLynxVoltageSensor voltageSensor;
     ElapsedTime voltageTimer;
     public double voltage = 12.0;
 
@@ -46,7 +50,8 @@ public class PandaRobot {
     public PandaServo outtakeClawServo, outtakePivotServo;
 
     // CAMERA
-    public OpenCvCamera baseCam;
+    public OpenCvWebcam baseCam;
+    public long minimumExposure;
     public SampleAlignmentPipeline sampleAlignmentPipeline;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -71,7 +76,7 @@ public class PandaRobot {
             }
         }
 
-        //sampleSensor = new AsyncRev2MSensor(hardwareMap.get(Rev2mDistanceSensor.class, "sample"));
+        voltageSensor = hardwareMap.getAll(PhotonLynxVoltageSensor.class).iterator().next();
 
         drive = new Mecanum();
         intake = new Intake();
@@ -99,7 +104,9 @@ public class PandaRobot {
             @Override
             public void onOpened()
             {
-                baseCam.startStreaming(160,120, OpenCvCameraRotation.UPRIGHT);
+                baseCam.startStreaming(1280,720, OpenCvCameraRotation.UPRIGHT, OpenCvWebcam.StreamFormat.MJPEG);
+                baseCam.getExposureControl().setMode(ExposureControl.Mode.Manual);
+                baseCam.getExposureControl().setExposure(200, TimeUnit.MICROSECONDS); // 0 - 500000 microseconds
             }
 
             @Override
@@ -121,9 +128,8 @@ public class PandaRobot {
             odometry.update(GoBildaPinpointDriver.readData.ONLY_UPDATE_HEADING);
         }
 
-
         if (voltageTimer.time(TimeUnit.SECONDS) > 10) {
-            voltage = controlHub.getLynxModule().getInputVoltage(VoltageUnit.VOLTS);
+            voltage = voltageSensor.getCachedVoltage();
             voltageTimer.reset();
         }
 

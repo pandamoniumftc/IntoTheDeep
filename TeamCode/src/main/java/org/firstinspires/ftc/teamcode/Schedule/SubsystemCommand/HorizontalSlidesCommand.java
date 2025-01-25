@@ -13,7 +13,7 @@ public class HorizontalSlidesCommand extends SequentialCommandGroup {
     public HorizontalSlidesCommand(Intake.SlideState state, boolean wait) {
         super(
                 new InstantCommand(() -> PandaRobot.getInstance().intake.updateSlideState(state)),
-                new WaitUntilCommand(() -> !wait || PandaRobot.getInstance().horizontalSlideActuator.reached)
+                new WaitUntilCommand(() -> !wait || PandaRobot.getInstance().horizontalSlideActuator.isFinished())
         );
     }
 }

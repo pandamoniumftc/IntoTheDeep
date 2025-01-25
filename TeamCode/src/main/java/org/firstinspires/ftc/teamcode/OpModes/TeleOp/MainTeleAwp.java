@@ -9,6 +9,7 @@ import com.arcrobotics.ftclib.command.WaitCommand;
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.arcrobotics.ftclib.gamepad.GamepadKeys;
 import com.arcrobotics.ftclib.geometry.Vector2d;
+import com.outoftheboxrobotics.photoncore.Photon;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -26,7 +27,7 @@ import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeClawComma
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.VerticalSlidesCommand;
 import org.firstinspires.ftc.teamcode.Subsystem.Intake;
 import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
-
+@Photon
 @TeleOp (name="main tele op")
 public class MainTeleAwp extends LinearOpMode {
     PandaRobot robot = PandaRobot.getInstance();
@@ -164,7 +165,7 @@ public class MainTeleAwp extends LinearOpMode {
             robot.write();
 
             //telemetry.addData("ROBOT HEADING", robot.odometry.getHeading());
-            //telemetry.addData("INTAKE SLIDES POS", robot.horizontalSlideActuator.getPosition());
+            telemetry.addData("INTAKE SLIDES POS", robot.horizontalSlideActuator.getPosition());
             //telemetry.addData("POS", robot.drive.sample);
             telemetry.addData("POWER", robot.drive.t.toString() + " " + robot.drive.h.toString());
             telemetry.addData("ADJUST", robot.intake.adjusting);

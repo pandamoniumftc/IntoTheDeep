@@ -25,12 +25,11 @@ public class GrabSampleCommand extends SequentialCommandGroup {
                 new AdjustPositionToSampleCommand(),
                 new InstantCommand(() -> PandaRobot.getInstance().intakeRotateClawServo.setPosition(scale(PandaRobot.getInstance().sampleAlignmentPipeline.getSampleAngle(), 0, 180, 0.445, 0.326))),
                 new HorizontalSlidesCommand(Intake.SlideState.GRABBING_SAMPLE, true),
-                new WaitCommand(1000),
                 new IntakeArmCommand(Intake.ArmState.GRABBING),
-                new WaitCommand(500),
+                new WaitCommand(1000),
                 new IntakeClawCommand(Intake.ClawState.OPENED),
                 new WaitCommand(250),
-                new IntakeArmCommand(Intake.ArmState.TRANSFERRING)
+                new IntakeArmCommand(Intake.ArmState.RETRACT)
         );
     }
 }
