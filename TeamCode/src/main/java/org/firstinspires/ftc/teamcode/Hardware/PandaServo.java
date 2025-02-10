@@ -7,9 +7,9 @@ import com.qualcomm.robotcore.hardware.ServoImplEx;
 import com.qualcomm.robotcore.util.Range;
 
 public class PandaServo implements HardwareDevice {
-    private ServoImplEx servo;
+    private Servo servo;
     public PandaServo(Servo servo) {
-        this.servo = (ServoImplEx) servo;
+        this.servo = servo;
     }
     public void setPosition(double pos) {
         servo.setPosition(pos);
@@ -18,7 +18,7 @@ public class PandaServo implements HardwareDevice {
         servo.setDirection(direction);
         return this;
     }
-    public ServoImplEx getServo() {
+    public Servo getServo() {
         return servo;
     }
     @Override

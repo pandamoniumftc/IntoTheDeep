@@ -9,6 +9,7 @@ import com.arcrobotics.ftclib.command.SequentialCommandGroup;
 import com.arcrobotics.ftclib.command.WaitCommand;
 import com.arcrobotics.ftclib.command.WaitUntilCommand;
 
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
@@ -20,16 +21,18 @@ import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeClawComman
 import org.firstinspires.ftc.teamcode.Subsystem.Intake;
 
 public class GrabSampleCommand extends SequentialCommandGroup {
+
     public GrabSampleCommand() {
         super(
                 new AdjustPositionToSampleCommand(),
                 new InstantCommand(() -> PandaRobot.getInstance().intakeRotateClawServo.setPosition(scale(PandaRobot.getInstance().sampleAlignmentPipeline.getSampleAngle(), 0, 180, 0.445, 0.326))),
                 new HorizontalSlidesCommand(Intake.SlideState.GRABBING_SAMPLE, true),
+                new WaitCommand(500),
                 new IntakeArmCommand(Intake.ArmState.GRABBING),
-                new WaitCommand(1000),
-                new IntakeClawCommand(Intake.ClawState.OPENED),
                 new WaitCommand(250),
-                new IntakeArmCommand(Intake.ArmState.RETRACT)
+                new InstantCommand(() -> PandaRobot.getInstance().current = PandaRobot.getInstance().controlHub.getLynxModule().getCurrent(CurrentUnit.AMPS)),
+                new IntakeClawCommand(Intake.ClawState.OPENED),
+                new WaitCommand(1000)
         );
     }
 }

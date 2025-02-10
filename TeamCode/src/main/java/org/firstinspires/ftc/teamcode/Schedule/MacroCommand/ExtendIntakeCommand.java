@@ -15,16 +15,17 @@ import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
 public class ExtendIntakeCommand extends ConditionalCommand {
     public ExtendIntakeCommand() {
         super(
-                new ParallelCommandGroup(
+                new SequentialCommandGroup(
                         new IntakeClawCommand(Intake.ClawState.CLOSED),
                         new HorizontalSlidesCommand(Intake.SlideState.SCANNING_SAMPLE, true),
                         new IntakeArmCommand(Intake.ArmState.DEFAULT)
                 ),
                 new ParallelCommandGroup(
                         new IntakeClawCommand(Intake.ClawState.CLOSED),
-                        new IntakeArmCommand(Intake.ArmState.DEFAULT)
+                        new IntakeArmCommand(Intake.ArmState.DEFAULT),
+                        new HorizontalSlidesCommand(Intake.SlideState.SCANNING_SAMPLE, true)
                 ),
-                () -> PandaRobot.getInstance().intake.slideState != Intake.SlideState.GRABBING_SAMPLE || PandaRobot.getInstance().intake.slideState != Intake.SlideState.SCANNING_SAMPLE
+                () -> PandaRobot.getInstance().intake.slideState != Intake.SlideState.GRABBING_SAMPLE
         );
     }
 }

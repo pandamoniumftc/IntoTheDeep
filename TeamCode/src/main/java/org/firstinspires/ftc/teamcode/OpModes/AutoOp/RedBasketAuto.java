@@ -4,6 +4,8 @@ import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.arcrobotics.ftclib.command.SequentialCommandGroup;
 import com.arcrobotics.ftclib.command.WaitCommand;
 import com.arcrobotics.ftclib.command.WaitUntilCommand;
+import com.arcrobotics.ftclib.geometry.Pose2d;
+import com.arcrobotics.ftclib.geometry.Rotation2d;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -13,6 +15,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.Hardware.Globals;
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
+import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreFirstSampleCommand;
+import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreSecondSampleCommand;
 import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreSpecimenPreloadLeftSideCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeArmCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeClawCommand;
@@ -36,8 +40,6 @@ public class RedBasketAuto extends LinearOpMode {
 
         robot.odometry.resetPosAndIMU();
 
-        robot.odometry.setPosition(new Pose2D(DistanceUnit.MM, 0.0, 10.0, AngleUnit.RADIANS, 0));
-
         robot.read();
         robot.horizontalSlideActuator.setInitialPosition();
         robot.verticalSlidesActuator.setInitialPosition();
@@ -45,34 +47,27 @@ public class RedBasketAuto extends LinearOpMode {
         CommandScheduler.getInstance().schedule(
                 new SequentialCommandGroup(
                         new IntakeClawCommand(Intake.ClawState.CLOSED),
-                        new OuttakeArmCommand(Outtake.ArmState.SCORING_SAMPLE),
+                        new OuttakeArmCommand(Outtake.ArmState.TRANSFERING),
                         new OuttakeClawCommand(Outtake.ClawState.OPENED),
+                        new IntakeArmCommand(Intake.ArmState.DEFAULT),
                         new WaitCommand(3000),
-                        new IntakeArmCommand(Intake.ArmState.TRANSFERRING),
                         new OuttakeClawCommand(Outtake.ClawState.CLOSED)
                 )
         );
 
         while (opModeInInit()) {
             CommandScheduler.getInstance().run();
-            robot.read();
-            robot.loop();
-            robot.write();
-
-            double loop = System.nanoTime();
-            telemetry.addData("hz ", 1000000000 / (loop - loopTime));
-            telemetry.addData("pos ", robot.odometry.getPosition().toString());
-            telemetry.addData("Runtime: ", timer.seconds());
+            telemetry.addLine("Initializing...");
             telemetry.update();
-
-            loopTime = loop;
         }
+
+        robot.odometry.setPosition(new Pose2d(0.0, 0.0, new Rotation2d(Math.toRadians(90))));
 
         CommandScheduler.getInstance().schedule(
                 new SequentialCommandGroup(
                         new ScoreSpecimenPreloadLeftSideCommand(),
-                        //new ScoreFirstSampleCommand(),
-                        //new ScoreSecondSampleCommand(),
+                        new ScoreFirstSampleCommand(),
+                        new ScoreSecondSampleCommand(),
                         //new ParkFirstLevelAscentCommand(),
                         new WaitUntilCommand(() -> timer.seconds() > 30)
                 )

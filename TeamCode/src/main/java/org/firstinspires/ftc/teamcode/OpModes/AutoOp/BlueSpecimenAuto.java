@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.OpModes.AutoOp;
 
 import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.arcrobotics.ftclib.command.SequentialCommandGroup;
+import com.arcrobotics.ftclib.command.WaitCommand;
 import com.arcrobotics.ftclib.command.WaitUntilCommand;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Rotation2d;
@@ -12,6 +13,10 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Hardware.Globals;
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
+import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.CycleSpecimenCommand;
+import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ParkObservationZone;
+import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.PushSampleIntoZoneCommand;
+import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreSpecimenPreloadRightSideCommand;
 import org.firstinspires.ftc.teamcode.Schedule.DriveCommand.PositionCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.HorizontalSlidesCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeArmCommand;
@@ -46,7 +51,9 @@ public class BlueSpecimenAuto extends LinearOpMode {
                         new HorizontalSlidesCommand(Intake.SlideState.TRANSFERRING, false),
                         new IntakeArmCommand(Intake.ArmState.TRANSFERRING),
                         new OuttakeClawCommand(Outtake.ClawState.OPENED),
-                        new OuttakeArmCommand(Outtake.ArmState.TRANSFERING)
+                        new OuttakeArmCommand(Outtake.ArmState.SCORING_SPECIMEN),
+                        new WaitCommand(3000),
+                        new OuttakeClawCommand(Outtake.ClawState.CLOSED)
                 )
         );
 
@@ -61,7 +68,11 @@ public class BlueSpecimenAuto extends LinearOpMode {
 
         CommandScheduler.getInstance().schedule(
                 new SequentialCommandGroup(
-                        new PositionCommand(new Pose2d(new Translation2d(300, 0), new Rotation2d(0))),
+                        new ScoreSpecimenPreloadRightSideCommand(),
+                        new PushSampleIntoZoneCommand(),
+                        new CycleSpecimenCommand(1),
+                        new CycleSpecimenCommand(2),
+                        new ParkObservationZone(),
                         new WaitUntilCommand(() -> timer.seconds() > 30)
                 )
         );

@@ -35,6 +35,7 @@ public class PandaHub {
     private HashMap<Integer, PandaServo> servos;
     private HashMap<Integer, PandaDigital> digital;
     private HashMap<Integer, PandaAnalog> analog;
+    public int numOfMotor = 0, numOfServo = 0;
     double voltage = 12.0;
     public PandaHub(HardwareMap hardwareMap, LynxModule module) {
         this.module = module;
@@ -54,11 +55,13 @@ public class PandaHub {
         analog = new HashMap<>();
 
         for (DcMotor motor : hardwareMap.getAll(DcMotor.class)) {
+            numOfMotor += 1;
             if (motor.getController().getConnectionInfo().equals(module.getConnectionInfo())) {
                 motors.put(motor.getPortNumber(), new PandaMotor(motor));
             }
         }
         for (Servo servo : hardwareMap.getAll(Servo.class)) {
+            numOfServo += 1;
             if (servo.getController().getConnectionInfo().equals(module.getConnectionInfo())) {
                 servos.put(servo.getPortNumber(), new PandaServo(servo));
             }

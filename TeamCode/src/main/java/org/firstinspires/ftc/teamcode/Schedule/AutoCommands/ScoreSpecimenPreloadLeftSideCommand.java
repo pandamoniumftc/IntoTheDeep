@@ -20,16 +20,11 @@ import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
 public class ScoreSpecimenPreloadLeftSideCommand extends SequentialCommandGroup {
     public ScoreSpecimenPreloadLeftSideCommand() {
         super(
-                new PositionCommand(new Pose2d(new Translation2d(-375.0, 125), new Rotation2d(-3 * PI / 4))).alongWith(new VerticalSlidesCommand(Outtake.SlideState.HIGH_BASKET, false)),
+                new PositionCommand(new Pose2d(-410, 201, new Rotation2d(Math.toRadians(-135))), 0.6).alongWith(new VerticalSlidesCommand(Outtake.SlideState.HIGH_BASKET, true)),
                 new OuttakeArmCommand(Outtake.ArmState.SCORING_SAMPLE),
                 new WaitCommand(500),
                 new OuttakeClawCommand(Outtake.ClawState.OPENED),
-                new WaitCommand(250),
-                new ParallelCommandGroup(
-                        new PositionCommand(new Pose2d(new Translation2d(-200, 360), new Rotation2d(-PI))),
-                        new VerticalSlidesCommand(Outtake.SlideState.DEFAULT, false),
-                        new OuttakeArmCommand(Outtake.ArmState.TRANSFERING)
-                )
+                new WaitCommand(250)
         );
     }
 }

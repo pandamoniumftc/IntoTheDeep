@@ -32,9 +32,8 @@ import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeClawComma
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.VerticalSlidesCommand;
 import org.firstinspires.ftc.teamcode.Subsystem.Intake;
 import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
-
-@TeleOp(name="main tele op")
-public class MainTeleAwp extends LinearOpMode {
+@TeleOp (name="main tele op reset")
+public class MainTeleAwpReset extends LinearOpMode {
     PandaRobot robot = PandaRobot.getInstance();
     GamepadEx Gamepad1, Gamepad2;
     final double MIN_MOTOR_POWER = 0.25;
@@ -53,6 +52,8 @@ public class MainTeleAwp extends LinearOpMode {
 
         robot.initialize(hardwareMap);
         multipleTelemetry = new MultipleTelemetry(telemetry);
+
+        robot.odometry.resetPosAndIMU();
 
         robot.read();
         robot.horizontalSlideActuator.setInitialPosition();
@@ -110,18 +111,12 @@ public class MainTeleAwp extends LinearOpMode {
         // switches between scoring modes
         Gamepad2.getGamepadButton(GamepadKeys.Button.BACK).
                 toggleWhenPressed(
-                        new InstantCommand(() -> SpecimenScoringMode = true).
-                                alongWith(
-                                        new SequentialCommandGroup(
-                                                new OuttakeArmCommand(Outtake.ArmState.SCORING_SPECIMEN),
-                                                new WaitCommand(500),
-                                                new OuttakeClawCommand(Outtake.ClawState.OPENED)
-                                        )
-                                ),
-                        new InstantCommand(() -> SpecimenScoringMode = false).
-                                alongWith(
-                                        new OuttakeArmCommand(Outtake.ArmState.TRANSFERING)
-                                )
+                        new InstantCommand(() -> SpecimenScoringMode = true).alongWith(new SequentialCommandGroup(
+                                new OuttakeArmCommand(Outtake.ArmState.SCORING_SPECIMEN),
+                                new WaitCommand(500),
+                                new OuttakeClawCommand(Outtake.ClawState.OPENED)
+                        )),
+                        new InstantCommand(() -> SpecimenScoringMode = false).alongWith(new OuttakeArmCommand(Outtake.ArmState.TRANSFERING))
                 );
 
         Gamepad2.getGamepadButton(GamepadKeys.Button.X).
@@ -158,7 +153,6 @@ public class MainTeleAwp extends LinearOpMode {
             robot.loop();
             robot.write();
             multipleTelemetry.addLine("Initializing...");
-            multipleTelemetry.addData("OUTTAKE SLIDES POS", robot.verticalSlidesActuator.profileOutput + " " + robot.verticalSlidesActuator.getPosition());
             multipleTelemetry.addData("HZ", 1E9 / (System.nanoTime() - loopStamp));
             loopStamp = System.nanoTime();
             multipleTelemetry.update();
@@ -166,14 +160,14 @@ public class MainTeleAwp extends LinearOpMode {
 
         multipleTelemetry.clear();
 
-        //FtcDashboard.getInstance().startCameraStream(robot.baseCam, 100);
+        FtcDashboard.getInstance().startCameraStream(robot.baseCam, 100);
 
-        /*CommandScheduler.getInstance().schedule(
+        CommandScheduler.getInstance().schedule(
                 new SequentialCommandGroup(
                         new HorizontalSlidesCommand(Intake.SlideState.TRANSFERRING, false),
                         new VerticalSlidesCommand(Outtake.SlideState.DEFAULT, false)
                 )
-        );*/
+        );
 
         //robot.odometry.setPosition(new Pose2d(0.0, 0.0, new Rotation2d(Math.toRadians(90))));
 

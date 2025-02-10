@@ -11,6 +11,8 @@ import com.arcrobotics.ftclib.geometry.Vector2d;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
+import org.firstinspires.ftc.teamcode.Hardware.Globals;
+import org.firstinspires.ftc.teamcode.Hardware.GoBildaPinpointDriver;
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
 import org.firstinspires.ftc.teamcode.Hardware.Subsystem;
 import org.opencv.core.Point;
@@ -20,7 +22,7 @@ import java.util.Arrays;
 public class Mecanum extends Subsystem {
     private PandaRobot robot;
     public double [] power = new double[4];
-    public final double MINIMUM_POWER_THRESHOLD = 0.1;
+    public final double MINIMUM_POWER_THRESHOLD = 0.2;
     public Vector2d t = new Vector2d(), h = new Vector2d();
     public Point sample = new Point();
     public Mecanum() {
@@ -36,7 +38,7 @@ public class Mecanum extends Subsystem {
                 .setDirection(DcMotorSimple.Direction.REVERSE)
                 .setCacheTolerance(0.01);
 
-        robot.backLeftMotor = robot.controlHub.getMotor(2)
+        robot.backLeftMotor = robot.controlHub.getMotor(3)
                 .setConfigurations(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
                 .setDirection(DcMotorSimple.Direction.FORWARD)
                 .setCacheTolerance(0.01);
@@ -49,7 +51,12 @@ public class Mecanum extends Subsystem {
 
     @Override
     public void read() {
-
+        if (Globals.opMode == Globals.RobotOpMode.AUTO) {
+            robot.odometry.update();
+        }
+        else {
+            robot.odometry.update(GoBildaPinpointDriver.readData.ONLY_UPDATE_HEADING);
+        }
     }
 
     @Override
@@ -77,12 +84,9 @@ public class Mecanum extends Subsystem {
         h = right;
         double cosA = Math.cos(-angle);
         double sinA = Math.sin(-angle);
-        double rx = left.getX() * cosA - left.getY() * sinA;
-        double ry = left.getX() * sinA + left.getY() * cosA;
-
-        double x = clip(rx, -1, 1);
-        double y = clip(ry, -1, 1);
-        double r = clip(right.getX(), -1, 1);
+        double x = left.getX() * cosA - left.getY() * sinA;
+        double y = left.getX() * sinA + left.getY() * cosA;
+        double r = right.getX();
 
         double scale = min(1.0/(abs(x)+abs(y)+abs(r)),1.0);
 
@@ -92,11 +96,11 @@ public class Mecanum extends Subsystem {
         power[3] = (y+x-r) * scale; // brm
     }
 
-    public boolean isStalled() {
+    public boolean stalled() {
         return robot.frontLeftMotor.isStalled(MINIMUM_POWER_THRESHOLD) && robot.frontRightMotor.isStalled(MINIMUM_POWER_THRESHOLD) && robot.backLeftMotor.isStalled(MINIMUM_POWER_THRESHOLD) && robot.backRightMotor.isStalled(MINIMUM_POWER_THRESHOLD);
     }
 
-    public void stopRobot() {
+    public void stop() {
         moveRobot(new Vector2d(), new Vector2d(), 0);
     }
 

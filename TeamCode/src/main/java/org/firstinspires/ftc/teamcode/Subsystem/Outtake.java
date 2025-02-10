@@ -7,8 +7,8 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 import org.firstinspires.ftc.teamcode.Hardware.PandaMotor;
 import org.firstinspires.ftc.teamcode.Hardware.PandaMotorActuator;
-import org.firstinspires.ftc.teamcode.Hardware.PandaMotorEncoder;
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
+import org.firstinspires.ftc.teamcode.Hardware.Sensors;
 import org.firstinspires.ftc.teamcode.Hardware.Subsystem;
 
 public class Outtake extends Subsystem {
@@ -29,7 +29,9 @@ public class Outtake extends Subsystem {
         HIGH_BASKET,
         LOW_BASKET,
         HIGH_CHAMBER,
-        LOW_CHAMBER
+        LOW_CHAMBER,
+        LOWERED_FROM_HIGH,
+        GRABBED_SPECIMEN
     }
     public SlideState slideState;
     public Outtake() {
@@ -40,20 +42,19 @@ public class Outtake extends Subsystem {
                         robot.controlHub.getMotor(0)
                                 .setDirection(DcMotorSimple.Direction.FORWARD)
                                 .setConfigurations(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
-                                .setCacheTolerance(0.05),
+                                .setCacheTolerance(0.01),
                         robot.expansionHub.getMotor(3)
                                 .setDirection(DcMotorSimple.Direction.REVERSE)
                                 .setConfigurations(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
-                                .setCacheTolerance(0.05)
+                                .setCacheTolerance(0.01)
                 },
-                new PandaMotorEncoder(robot.expansionHub.getMotor(3))
-        )
-                .setPIDController(0.008, 0.0, 0.0)
+                Sensors.VERTICAL_SLIDES,
+                true)
+                .setPIDController(0.009, 0.0, 0.0) // 0.009
                 .setLimits(0, 4500)
-                .setMotionProfile(6500, 6500)
+                .setMotionProfile(2000, 3750) // 2000, 3750
                 .setTolerance(100)
-                .setPowerThreshold(0.05)
-        ;
+                .setPowerThreshold(0.4);
 
         robot.outtakeClawServo = robot.controlHub.getServo(4);
         robot.outtakePivotServo = robot.expansionHub.getServo(1);
@@ -82,7 +83,7 @@ public class Outtake extends Subsystem {
         this.armState = state;
         switch (armState) {
             case TRANSFERING:
-                robot.outtakePivotServo.setPosition(0.19); //0.19
+                robot.outtakePivotServo.setPosition(0.15); //0.19
                 break;
             case SCORING_SAMPLE:
                 robot.outtakePivotServo.setPosition(0.65);
@@ -94,7 +95,7 @@ public class Outtake extends Subsystem {
     }
     public void updateClawState(ClawState state) {
         this.clawState = state;
-        robot.outtakeClawServo.setPosition(clawState == ClawState.CLOSED ? 0.65 : 1.0);
+        robot.outtakeClawServo.setPosition(clawState == ClawState.CLOSED ? 0.63 : 1.0);
     }
 
     public void updateSlideState(SlideState state) {
@@ -107,11 +108,18 @@ public class Outtake extends Subsystem {
                 robot.verticalSlidesActuator.setTargetPosition(3750);
                 break;
             case LOW_BASKET:
+                robot.verticalSlidesActuator.setTargetPosition(2200);
                 break;
             case HIGH_CHAMBER:
                 robot.verticalSlidesActuator.setTargetPosition(2000);
                 break;
             case LOW_CHAMBER:
+                break;
+            case LOWERED_FROM_HIGH:
+                robot.verticalSlidesActuator.setTargetPosition(1400);
+                break;
+            case GRABBED_SPECIMEN:
+                robot.verticalSlidesActuator.setTargetPosition(300);
                 break;
         }
     }

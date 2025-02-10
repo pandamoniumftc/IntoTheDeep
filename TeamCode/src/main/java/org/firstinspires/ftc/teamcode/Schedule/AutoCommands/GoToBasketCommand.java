@@ -8,14 +8,13 @@ import org.firstinspires.ftc.teamcode.Schedule.DriveCommand.SplineCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeArmCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.VerticalSlidesCommand;
 import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
-import org.firstinspires.ftc.teamcode.Util.BezierCurvePath;
 import org.opencv.core.Point;
 
 public class GoToBasketCommand extends SequentialCommandGroup {
     public GoToBasketCommand() {
         super(
                 new ParallelCommandGroup(
-                        new SplineCommand(new Pose2d(), new Point(), new Point()),
+                        new SplineCommand(new Pose2d(), 0, 0, 0.4),
                         new VerticalSlidesCommand(Outtake.SlideState.DEFAULT, false),
                         new OuttakeArmCommand(Outtake.ArmState.TRANSFERING)
                 )

@@ -8,10 +8,10 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.Hardware.PandaMotor;
 import org.firstinspires.ftc.teamcode.Hardware.PandaMotorActuator;
-import org.firstinspires.ftc.teamcode.Hardware.PandaMotorEncoder;
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
 import org.firstinspires.ftc.teamcode.Hardware.PandaServo;
 import org.firstinspires.ftc.teamcode.Hardware.PandaServoActuator;
+import org.firstinspires.ftc.teamcode.Hardware.Sensors;
 import org.firstinspires.ftc.teamcode.Hardware.Subsystem;
 
 public class Intake extends Subsystem {
@@ -42,26 +42,26 @@ public class Intake extends Subsystem {
         robot.horizontalSlideActuator = new PandaMotorActuator(
                 new PandaMotor[] {
                         robot.expansionHub.getMotor(0)
-                                .setDirection(DcMotorSimple.Direction.REVERSE)
+                                .setDirection(DcMotorSimple.Direction.FORWARD)
                                 .setConfigurations(DcMotor.RunMode.RUN_WITHOUT_ENCODER, DcMotor.ZeroPowerBehavior.BRAKE)
-                                .setCacheTolerance(0.1)
+                                .setCacheTolerance(0.02)
                 },
-                new PandaMotorEncoder(robot.expansionHub.getMotor(0).setDirection(DcMotorSimple.Direction.FORWARD))
-        )
-                .setPIDController(0.013, 0.00015, 0.0001)
-                .setLimits(0.0, 180)
-                .setMotionProfile(320, 480)
-                .setTolerance(1)
+                Sensors.HORIZONTAL_SLIDES,
+                false)
+                .setPIDController(0.009, 0.0005, 0.0)
+                .setLimits(0.0, 200)
+                .setMotionProfile(300, 1200)
+                .setTolerance(5)
                 .setPowerThreshold(0.1);
 
         robot.intakeArmActuator = new PandaServoActuator(
                 new PandaServo[] {
-                        robot.expansionHub.getServo(0).setDirection(Servo.Direction.FORWARD),
+                        robot.expansionHub.getServo(5).setDirection(Servo.Direction.FORWARD),
                         robot.controlHub.getServo(0).setDirection(Servo.Direction.REVERSE)
                 }
         ).setOffset(new double[] {0.0, 0.0});
 
-        robot.intakeClawServo = robot.controlHub.getServo(2);
+        robot.intakeClawServo = robot.controlHub.getServo(5);
         robot.intakeRotateClawServo = robot.controlHub.getServo(3); // 0* = 0.445, 90* = 0.384, 180* = 0.327
         robot.intakeRotateArmServo = robot.controlHub.getServo(1);
         robot.intakeLightChain = robot.expansionHub.getServo(3);
@@ -75,7 +75,6 @@ public class Intake extends Subsystem {
     @Override
     public void loop() {
         robot.horizontalSlideActuator.loop();
-        robot.intakeArmActuator.loop();
     }
 
     @Override
@@ -84,9 +83,13 @@ public class Intake extends Subsystem {
         robot.intakeArmActuator.write();
     }
 
+    public void write(double power) {
+        robot.horizontalSlideActuator.write(power);
+    }
+
     public void updateClawState(ClawState state) {
         this.clawState = state;
-        robot.intakeClawServo.setPosition((clawState == ClawState.OPENED) ? 0.68 : 0.54);
+        robot.intakeClawServo.setPosition((clawState == ClawState.OPENED) ? 0.70 : 0.54);
     }
     public void updateArmState(ArmState state) {
         this.armState = state;
@@ -96,14 +99,14 @@ public class Intake extends Subsystem {
                 robot.intakeRotateArmServo.setPosition(0.06);
                 break;
             case TRANSFERRING:
-                robot.intakeArmActuator.setPosition(0.46);
+                robot.intakeArmActuator.setPosition(0.48);
                 robot.intakeRotateArmServo.setPosition(0.74);
-                robot.intakeRotateClawServo.setPosition(0.445);
+                robot.intakeRotateClawServo.setPosition(0.446);
                 break;
             case DEFAULT:
                 robot.intakeArmActuator.setPosition(0.48);
                 robot.intakeRotateArmServo.setPosition(0.06);
-                robot.intakeRotateClawServo.setPosition(0.3835);
+                robot.intakeRotateClawServo.setPosition(0.3845);
                 break;
             case RETRACT:
                 robot.intakeArmActuator.setPosition(0.48);
@@ -118,13 +121,13 @@ public class Intake extends Subsystem {
                 robot.horizontalSlideActuator.setTargetPosition(0);
                 break;
             case DEFAULT:
-                robot.horizontalSlideActuator.setTargetPosition(20);
+                robot.horizontalSlideActuator.setTargetPosition(25);
                 break;
             case SCANNING_SAMPLE:
-                robot.horizontalSlideActuator.setTargetPosition(160);
+                robot.horizontalSlideActuator.setTargetPosition(200);
                 break;
             case GRABBING_SAMPLE:
-                robot.horizontalSlideActuator.setTargetPosition(100);
+                robot.horizontalSlideActuator.setTargetPosition(125);
                 break;
         }
     }

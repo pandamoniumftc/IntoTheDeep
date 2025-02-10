@@ -1,5 +1,9 @@
 package org.firstinspires.ftc.teamcode.Schedule.DriveCommand;
 
+import static com.qualcomm.robotcore.util.Range.clip;
+
+import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.normalizeRadians;
+
 import com.arcrobotics.ftclib.command.CommandBase;
 import com.arcrobotics.ftclib.geometry.Pose2d;
 import com.arcrobotics.ftclib.geometry.Vector2d;
@@ -9,17 +13,17 @@ import org.firstinspires.ftc.teamcode.Util.Controller.PID;
 public class PositionCommand extends CommandBase {
     PandaRobot robot;
     public Pose2d robotPose, targetPosition;
-    public PID xController = new PID(0.008, 0.0, 0.0);
-    public PID yController = new PID(0.008, 0.0, 0.0);
-    public PID hController = new PID(0.4, 0.0, 0.0);
-    public final double T_THRESHOLD = 25.0, H_THRESHOLD = 0.1;
-    public PositionCommand(Pose2d pos) {
+    public PID xController = new PID(0.014, 0.0, 0.001);
+    public PID yController = new PID(0.014, 0.0, 0.001);
+    public PID hController = new PID(0.8, 0.0, 0.001);
+    public final double T_THRESHOLD = 15.0, H_THRESHOLD = 0.1, MAX_POWER;
+    public PositionCommand(Pose2d pos, double maxPower) {
         robot = PandaRobot.getInstance();
         targetPosition = pos;
+        this.MAX_POWER = maxPower;
     }
     @Override
     public void initialize() {
-        robotPose = robot.odometry.getPosition();
         xController.reInit();
         yController.reInit();
         hController.reInit();
@@ -28,9 +32,11 @@ public class PositionCommand extends CommandBase {
     public void execute() {
         robotPose = robot.odometry.getPosition();
 
-        double x = xController.update(robot.odometry.getPosition().getX(), targetPosition.getX());
-        double y = yController.update(robot.odometry.getPosition().getY(), targetPosition.getY());
-        double h = hController.update(robot.odometry.getPosition().getHeading(), targetPosition.getHeading());
+        double deltaH = -normalizeRadians(targetPosition.getHeading() - robot.odometry.getPosition().getHeading());
+
+        double x = clip(xController.update(robot.odometry.getPosition().getX(), targetPosition.getX()), -MAX_POWER, MAX_POWER);
+        double y = clip(yController.update(robot.odometry.getPosition().getY(), targetPosition.getY()), -MAX_POWER, MAX_POWER);
+        double h = clip(hController.update(deltaH, 0), -MAX_POWER, MAX_POWER);
         robot.drive.moveRobot(new Vector2d(x, y), new Vector2d(h, 0.0), robot.odometry.getHeading());
     }
 
@@ -41,7 +47,7 @@ public class PositionCommand extends CommandBase {
 
     @Override
     public void end(boolean interrupted) {
-        robot.drive.stopRobot();
+        robot.drive.stop();
     }
     /*PandaRobot robot;
     public Pose2d robotPose, targetPosition;

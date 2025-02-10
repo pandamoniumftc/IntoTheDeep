@@ -22,7 +22,7 @@ public class ScoreThirdSampleCommand extends SequentialCommandGroup {
     public ScoreThirdSampleCommand() {
         super(
                 new ParallelCommandGroup(
-                        new PositionCommand(new Pose2d(new Translation2d(-50, 600), new Rotation2d(5.0 * -PI / 4.0))),
+                        new PositionCommand(new Pose2d(new Translation2d(-50, 600), new Rotation2d(5.0 * -PI / 4.0)), 0.5),
                         new VerticalSlidesCommand(Outtake.SlideState.DEFAULT, false),
                         new OuttakeArmCommand(Outtake.ArmState.TRANSFERING)
                 ),

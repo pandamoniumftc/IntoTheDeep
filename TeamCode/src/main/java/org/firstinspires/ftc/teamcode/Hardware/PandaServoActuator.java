@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit;
 
 public class PandaServoActuator {
     private PandaServo[] devices;
-    private PandaAnalogEncoder encoder;
     private double velocity = 0.0, position = 0.0, pPosition = 0.0, lowerLimit = 0.0, upperLimit = 1.0, tolerance, target;
     private double[] offsets;
     public boolean reached;
@@ -28,27 +27,11 @@ public class PandaServoActuator {
         }
         timer = new ElapsedTime();
     }
-    public PandaServoActuator(PandaServo[] devices, PandaAnalogEncoder encoder) {
-        this.devices = devices;
-        offsets = new double[devices.length];
-        for (int i = 0; i < devices.length; i++) {
-            offsets[i] = 0.0;
-        }
-        this.encoder = encoder;
-        timer = new ElapsedTime();
-    }
 
     public void read() {
-        position = encoder.getValue();
-        velocity = (position - pPosition) / (timer.time(TimeUnit.NANOSECONDS) * 1E-9);
-        pPosition = position;
-        timer.reset();
     }
 
     public void loop() {
-        if (encoder != null) {
-            reached = (Math.abs(target - position) <= tolerance);
-        }
     }
 
     public void write() {
