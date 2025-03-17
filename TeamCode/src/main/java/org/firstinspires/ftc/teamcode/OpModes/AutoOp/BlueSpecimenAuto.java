@@ -26,11 +26,30 @@ import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeClawComma
 import org.firstinspires.ftc.teamcode.Subsystem.Intake;
 import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
 
+import java.time.zone.ZoneRules;
+
 @Autonomous(name = "blue specimen auto")
 public class BlueSpecimenAuto extends LinearOpMode {
     private final PandaRobot robot = PandaRobot.getInstance();
     private final ElapsedTime timer = new ElapsedTime();
     private double loopTime = 0.0;
+    PushSampleIntoZoneCommand push = new PushSampleIntoZoneCommand();
+    CycleSpecimenCommand firstSpec = new CycleSpecimenCommand(1);
+    CycleSpecimenCommand secondSpec = new CycleSpecimenCommand(2);
+    CycleSpecimenCommand thirdSpec = new CycleSpecimenCommand(3);
+    CycleSpecimenCommand fourthSpec = new CycleSpecimenCommand(4);
+    ParkObservationZone zone = new ParkObservationZone();
+
+    private enum State {
+        PUSH,
+        FIRST_SPEC,
+        SECOND_SPEC,
+        THIRD_SPEC,
+        FOURTH_SPEC,
+        PARK,
+        FINISHED
+    }
+    State state = State.PUSH;
     @Override
     public void runOpMode() throws InterruptedException {
         CommandScheduler.getInstance().reset();
@@ -45,47 +64,58 @@ public class BlueSpecimenAuto extends LinearOpMode {
         robot.horizontalSlideActuator.setInitialPosition();
         robot.verticalSlidesActuator.setInitialPosition();
 
-        CommandScheduler.getInstance().schedule(
-                new SequentialCommandGroup(
-                        new IntakeClawCommand(Intake.ClawState.CLOSED),
-                        new HorizontalSlidesCommand(Intake.SlideState.TRANSFERRING, false),
-                        new IntakeArmCommand(Intake.ArmState.TRANSFERRING),
-                        new OuttakeClawCommand(Outtake.ClawState.OPENED),
-                        new OuttakeArmCommand(Outtake.ArmState.SCORING_SPECIMEN),
-                        new WaitCommand(3000),
-                        new OuttakeClawCommand(Outtake.ClawState.CLOSED)
-                )
-        );
+        robot.reset(false);
 
         while (opModeInInit()) {
-            CommandScheduler.getInstance().run();
-            robot.read();
-            robot.loop();
-            robot.write();
+            robot.update();
             telemetry.addLine("Initializing...");
             telemetry.update();
         }
 
-        CommandScheduler.getInstance().schedule(
-                new SequentialCommandGroup(
-                        new ScoreSpecimenPreloadRightSideCommand(),
-                        new PushSampleIntoZoneCommand(),
-                        new CycleSpecimenCommand(1),
-                        new CycleSpecimenCommand(2),
-                        new ParkObservationZone(),
-                        new WaitUntilCommand(() -> timer.seconds() > 30)
-                )
-        );
+        CommandScheduler.getInstance().schedule(push);
 
         timer.reset();
 
         while (opModeIsActive() && !isStopRequested()) {
-            CommandScheduler.getInstance().run();
-            robot.read();
-            robot.loop();
-            robot.write();
+            robot.update();
+
+            switch(state) {
+                case PUSH:
+                    if (!CommandScheduler.getInstance().isScheduled(push)) {
+                        CommandScheduler.getInstance().schedule(firstSpec);
+                        state = State.FIRST_SPEC;
+                    }
+                    break;
+                case FIRST_SPEC:
+                    if (!CommandScheduler.getInstance().isScheduled(firstSpec)) {
+                        CommandScheduler.getInstance().schedule(secondSpec);
+                        state = State.SECOND_SPEC;
+                    }
+                    break;
+                case SECOND_SPEC:
+                    if (!CommandScheduler.getInstance().isScheduled(secondSpec)) {
+                        CommandScheduler.getInstance().schedule(thirdSpec);
+                        state = State.THIRD_SPEC;
+                    }
+                    break;
+                case THIRD_SPEC:
+                    if (!CommandScheduler.getInstance().isScheduled(thirdSpec)) {
+                        CommandScheduler.getInstance().schedule(zone);
+                        state = State.PARK;
+                    }
+                    break;
+                case PARK:
+                    if (!CommandScheduler.getInstance().isScheduled(zone)) {
+                        state = State.FINISHED;
+                    }
+                case FINISHED:
+                    Globals.pose = robot.drive.currentPosition;
+                    break;
+            }
+
 
             double loop = System.nanoTime();
+            telemetry.addData("state ", state);
             telemetry.addData("hz ", 1000000000 / (loop - loopTime));
             telemetry.addLine(robot.odometry.getPosition().toString());
             telemetry.addData("Runtime: ", timer.seconds());
@@ -93,8 +123,5 @@ public class BlueSpecimenAuto extends LinearOpMode {
 
             loopTime = loop;
         }
-
-        robot.baseCam.stopStreaming();
-        robot.baseCam.closeCameraDevice();
     }
 }

@@ -12,7 +12,6 @@ import org.opencv.core.Point;
 public class ParkFirstLevelAscentCommand extends SequentialCommandGroup {
     public ParkFirstLevelAscentCommand() {
         super(
-                new SplineCommand(new Pose2d(), 0, 0, 0.4),
                 new OuttakeArmCommand(Outtake.ArmState.SCORING_SPECIMEN)
         );
     }

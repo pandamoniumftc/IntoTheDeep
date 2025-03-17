@@ -3,8 +3,6 @@ package org.firstinspires.ftc.teamcode.Hardware;
 import static com.qualcomm.robotcore.util.Range.clip;
 import static java.lang.Math.abs;
 
-import com.outoftheboxrobotics.photoncore.hardware.motor.PhotonAdvancedDcMotor;
-import com.outoftheboxrobotics.photoncore.hardware.motor.PhotonDcMotor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorImplEx;
@@ -19,6 +17,8 @@ public class PandaMotor implements HardwareDevice {
     public double power, pPower, tolerance;
     public PandaMotor(DcMotor motor) {
         this.motor = (DcMotorImplEx) motor;
+        this.motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        this.motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     }
     public void write(double power) {
         if (abs(power - pPower) > tolerance) {
@@ -33,8 +33,12 @@ public class PandaMotor implements HardwareDevice {
         return this;
     }
 
-    public PandaMotor setConfigurations(DcMotor.RunMode mode, DcMotor.ZeroPowerBehavior behavior) {
+    public PandaMotor setMode(DcMotor.RunMode mode) {
         motor.setMode(mode);
+        return this;
+    }
+
+    public PandaMotor setZeroPowerBehavior(DcMotor.ZeroPowerBehavior behavior) {
         motor.setZeroPowerBehavior(behavior);
         return this;
     }

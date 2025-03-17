@@ -1,8 +1,5 @@
 package org.firstinspires.ftc.teamcode.OpModes.TeleOp;
 
-import static com.qualcomm.robotcore.util.Range.scale;
-
-import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.arcrobotics.ftclib.command.ConditionalCommand;
@@ -11,7 +8,6 @@ import com.arcrobotics.ftclib.command.SequentialCommandGroup;
 import com.arcrobotics.ftclib.command.WaitCommand;
 import com.arcrobotics.ftclib.gamepad.GamepadEx;
 import com.arcrobotics.ftclib.gamepad.GamepadKeys;
-import com.arcrobotics.ftclib.geometry.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -19,12 +15,12 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.Hardware.Globals;
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
-import org.firstinspires.ftc.teamcode.Schedule.DriveCommand.AdjustPositionToSampleCommand;
 import org.firstinspires.ftc.teamcode.Schedule.MacroCommand.ExtendIntakeCommand;
+import org.firstinspires.ftc.teamcode.Schedule.MacroCommand.GrabSampleCommand;
+import org.firstinspires.ftc.teamcode.Schedule.MacroCommand.IntakeSampleCommand;
 import org.firstinspires.ftc.teamcode.Schedule.MacroCommand.ScoreSampleCommand;
 import org.firstinspires.ftc.teamcode.Schedule.MacroCommand.ScoreSpecimenCommand;
 import org.firstinspires.ftc.teamcode.Schedule.MacroCommand.TransferSampleCommand;
-import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.HorizontalSlidesCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeArmCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeClawCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeArmCommand;
@@ -52,13 +48,15 @@ public class MainTeleAwp extends LinearOpMode {
         Gamepad2 = new GamepadEx(gamepad2);
 
         robot.initialize(hardwareMap);
+
+        robot.drive.setDriverGamepad(Gamepad1);
+
         multipleTelemetry = new MultipleTelemetry(telemetry);
 
-        robot.read();
-        robot.horizontalSlideActuator.setInitialPosition();
-        robot.verticalSlidesActuator.setInitialPosition();
+        robot.intakeLightChain.setPosition(1);
 
-        robot.intakeLightChain.setPosition(0.5);
+        robot.odometry.recalibrateIMU();
+        robot.odometry.setPosition(Globals.pose);
 
         // extend and retracts intake arm
         Gamepad2.getGamepadButton(GamepadKeys.Button.B).
@@ -66,23 +64,8 @@ public class MainTeleAwp extends LinearOpMode {
                         new ConditionalCommand(
                                 new ConditionalCommand(
                                         new ExtendIntakeCommand(),
-                                        new SequentialCommandGroup(
-                                                new AdjustPositionToSampleCommand(),
-                                                new InstantCommand(() -> PandaRobot.getInstance().intakeRotateClawServo.setPosition(scale(PandaRobot.getInstance().sampleAlignmentPipeline.getSampleAngle(), 0, 180, 0.445, 0.326))),
-                                                new HorizontalSlidesCommand(Intake.SlideState.GRABBING_SAMPLE, true),
-                                                new WaitCommand(500),
-                                                new IntakeArmCommand(Intake.ArmState.GRABBING),
-                                                new WaitCommand(250),
-                                                new InstantCommand(() -> PandaRobot.getInstance().current = PandaRobot.getInstance().controlHub.getLynxModule().getCurrent(CurrentUnit.AMPS)),
-                                                new IntakeClawCommand(Intake.ClawState.OPENED),
-                                                new WaitCommand(500),
-                                                new ConditionalCommand(
-                                                        new TransferSampleCommand(),
-                                                        new ExtendIntakeCommand(),
-                                                        () -> (PandaRobot.getInstance().controlHub.getLynxModule().getCurrent(CurrentUnit.AMPS) - PandaRobot.getInstance().current) > 0.1
-                                                )
-                                        ),
-                                        () -> PandaRobot.getInstance().intake.slideState == Intake.SlideState.DEFAULT || PandaRobot.getInstance().intake.slideState == Intake.SlideState.TRANSFERRING
+                                        new IntakeSampleCommand(),
+                                        () -> PandaRobot.getInstance().intake.slideState == Intake.SlideState.TRANSFERRING
                                 ),
                                 new ConditionalCommand(
                                         new SequentialCommandGroup(
@@ -110,18 +93,12 @@ public class MainTeleAwp extends LinearOpMode {
         // switches between scoring modes
         Gamepad2.getGamepadButton(GamepadKeys.Button.BACK).
                 toggleWhenPressed(
-                        new InstantCommand(() -> SpecimenScoringMode = true).
-                                alongWith(
-                                        new SequentialCommandGroup(
-                                                new OuttakeArmCommand(Outtake.ArmState.SCORING_SPECIMEN),
-                                                new WaitCommand(500),
-                                                new OuttakeClawCommand(Outtake.ClawState.OPENED)
-                                        )
-                                ),
-                        new InstantCommand(() -> SpecimenScoringMode = false).
-                                alongWith(
-                                        new OuttakeArmCommand(Outtake.ArmState.TRANSFERING)
-                                )
+                        new InstantCommand(() -> SpecimenScoringMode = true).alongWith(new SequentialCommandGroup(
+                                new OuttakeArmCommand(Outtake.ArmState.SCORING_SPECIMEN),
+                                new WaitCommand(500),
+                                new OuttakeClawCommand(Outtake.ClawState.OPENED)
+                        )),
+                        new InstantCommand(() -> SpecimenScoringMode = false).alongWith(new OuttakeArmCommand(Outtake.ArmState.TRANSFERRING))
                 );
 
         Gamepad2.getGamepadButton(GamepadKeys.Button.X).
@@ -142,78 +119,32 @@ public class MainTeleAwp extends LinearOpMode {
                         )
                 );
 
-        CommandScheduler.getInstance().schedule(
-                new SequentialCommandGroup(
-                        new InstantCommand(() -> robot.drive.stop()),
-                        new IntakeClawCommand(Intake.ClawState.CLOSED),
-                        new IntakeArmCommand(Intake.ArmState.TRANSFERRING),
-                        new OuttakeClawCommand(Outtake.ClawState.OPENED),
-                        new OuttakeArmCommand(Outtake.ArmState.TRANSFERING)
-                )
-        );
+        robot.reset(true);
 
         while (opModeInInit()) {
-            CommandScheduler.getInstance().run();
-            robot.read();
-            robot.loop();
-            robot.write();
+            robot.update();
             multipleTelemetry.addLine("Initializing...");
-            multipleTelemetry.addData("OUTTAKE SLIDES POS", robot.verticalSlidesActuator.profileOutput + " " + robot.verticalSlidesActuator.getPosition());
-            multipleTelemetry.addData("HZ", 1E9 / (System.nanoTime() - loopStamp));
-            loopStamp = System.nanoTime();
             multipleTelemetry.update();
         }
 
         multipleTelemetry.clear();
 
-        //FtcDashboard.getInstance().startCameraStream(robot.baseCam, 100);
-
-        /*CommandScheduler.getInstance().schedule(
-                new SequentialCommandGroup(
-                        new HorizontalSlidesCommand(Intake.SlideState.TRANSFERRING, false),
-                        new VerticalSlidesCommand(Outtake.SlideState.DEFAULT, false)
-                )
-        );*/
-
-        //robot.odometry.setPosition(new Pose2d(0.0, 0.0, new Rotation2d(Math.toRadians(90))));
-
         while (opModeIsActive() && !isStopRequested()) {
-            CommandScheduler.getInstance().run();
+            robot.update();
 
-            double scale = (1.0 - MIN_MOTOR_POWER) * (1.0 - Gamepad1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)) + MIN_MOTOR_POWER;
-
-            if (!robot.intake.adjusting) {
-                robot.drive.moveRobot(
-                        new Vector2d(Gamepad1.getLeftX(), Gamepad1.getLeftY()).scale(scale),
-                        new Vector2d(Gamepad1.getRightX(), Gamepad1.getRightY()).scale(scale),
-                        robot.odometry.getHeading()
-                );
-            }
-
-            robot.read();
-            robot.loop();
-            robot.write();
-
-            //robot.verticalSlidesActuator.write(Gamepad2.getLeftY());
-
-            //telemetry.addData("ROBOT HEADING", robot.odometry.getHeading());
             multipleTelemetry.addData("INTAKE SLIDES POS", robot.horizontalSlideActuator.getPosition());
-            //multipleTelemetry.addData("INTAKE SLIDES POWER", robot.verticalSlidesActuator.power);
-            //telemetry.addData("POS", robot.drive.sample);
-            //telemetry.addData("POWER", robot.drive.t.toString() + " " + robot.drive.h.toString());
-            multipleTelemetry.addData("SAMPLE", robot.drive.sample);
-            //telemetry.addData("FPS", robot.baseCam.getFps() + " " + robot.baseCam.getCurrentPipelineMaxFps());
-            telemetry.addData("ROBOT POS", robot.odometry.getPosition().toString());
             telemetry.addData("OUTTAKE SLIDES POS", robot.verticalSlidesActuator.profileOutput + " " + robot.verticalSlidesActuator.getPosition());
-            //telemetry.addData("SAMPLE ANGLE", robot.sampleAlignmentPipeline.getSampleAngle());
+            telemetry.addData("DRIVETRAIN POWERS", robot.drive.printMotorPowers());
+            telemetry.addData("ROBOT POS", robot.odometry.getPosition().toString());
+            //telemetry.addData("LIMELIGHT RESULTS", robot.intake.getLimelightResults());
             //telemetry.addData("INCH", robot.outtakeClawSensor.getDistance(DistanceUnit.INCH));
-            //telemetry.addData("current", PandaRobot.getInstance().controlHub.getLynxModule().getCurrent(CurrentUnit.AMPS));
+            //telemetry.addData("STATE", robot.drive.state);
+            telemetry.addData("CURRENT", robot.intake.current);
             multipleTelemetry.addData("HZ", 1E9 / (System.nanoTime() - loopStamp));
             loopStamp = System.nanoTime();
             multipleTelemetry.update();
         }
 
-        robot.baseCam.stopStreaming();
-        robot.baseCam.closeCameraDevice();
+        robot.limelight.shutdown();
     }
 }

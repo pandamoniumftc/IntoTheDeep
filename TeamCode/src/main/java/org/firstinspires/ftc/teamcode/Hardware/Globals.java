@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.Hardware;
 
+import org.firstinspires.ftc.teamcode.Util.Pose2d;
+
 public class Globals {
     public enum RobotAlliance {
         BLUE,
@@ -11,5 +13,5 @@ public class Globals {
         TELEOP
     }
     public static RobotOpMode opMode;
-    public static boolean telemetryEnable = false;
+    public static Pose2d pose;
 }

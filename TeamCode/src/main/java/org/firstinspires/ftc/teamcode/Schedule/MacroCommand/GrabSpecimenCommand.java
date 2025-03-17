@@ -10,16 +10,12 @@ import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeClawComma
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.VerticalSlidesCommand;
 import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
 
-public class GrabSpecimenCommand extends ConditionalCommand {
+public class GrabSpecimenCommand extends SequentialCommandGroup {
     public GrabSpecimenCommand() {
         super(
-                new SequentialCommandGroup(
-                        new OuttakeClawCommand(Outtake.ClawState.CLOSED),
-                        new WaitCommand(500),
-                        new VerticalSlidesCommand(Outtake.SlideState.GRABBED_SPECIMEN, true)
-                ),
-                new WaitCommand(0),
-                () -> true
+                new OuttakeClawCommand(Outtake.ClawState.CLOSED),
+                new WaitCommand(250),
+                new VerticalSlidesCommand(Outtake.SlideState.GRABBED_SPECIMEN, true)
         );
     }
 }

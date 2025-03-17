@@ -68,26 +68,27 @@ public class PandaMotorActuator {
     }
 
     public void setTargetPosition(double pos) {
+        target = clip(pos, lowerLimit, upperLimit);
         if (profile != null) {
-            target = clip(pos, lowerLimit, upperLimit);
             this.profile = new MotionProfile(getPosition(), target, this.profile.vMax, this.profile.aMax);
             profileTimer.reset();
             reached = false;
         }
     }
     public void setInitialPosition() {
-        initial = position;
+        for (PandaMotor motor : devices) {
+            motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        }
     }
     public double getPosition() {
-        return position - initial;
+        return position;
     }
     public double getVelocity() {
         return velocity;
     }
     public PandaMotorActuator setPIDController(double kp, double ki, double kd) {
-        if (controller == null) {
-            this.controller = new MotorPID(kp, ki, kd);
-        }
+        this.controller = new MotorPID(kp, ki, kd);
         return this;
     }
     public PandaMotorActuator setMotionProfile(double velocity, double acceleration) {
@@ -115,6 +116,6 @@ public class PandaMotorActuator {
         return this;
     }
     public boolean isFinished() {
-        return (abs(target - getPosition()) <= tolerance) && stalled;
+        return (abs(target - getPosition()) <= tolerance) && (controller == null || profile == null || stalled);
     }
 }

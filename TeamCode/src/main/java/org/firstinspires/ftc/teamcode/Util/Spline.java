@@ -1,60 +1,92 @@
 package org.firstinspires.ftc.teamcode.Util;
 
-import static java.lang.Double.min;
+import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.normalizeRadians;
+import static java.lang.Math.atan2;
 import static java.lang.Math.cos;
-import static java.lang.Math.pow;
+import static java.lang.Math.signum;
 import static java.lang.Math.sin;
-
-import com.arcrobotics.ftclib.geometry.Pose2d;
-import com.arcrobotics.ftclib.geometry.Translation2d;
-import com.arcrobotics.ftclib.geometry.Vector2d;
-
-import org.opencv.core.Point;
 
 import java.util.ArrayList;
 
 public class Spline {
-    public Pose2d P0, P1;
-    public ArrayList<Double> tValues = new ArrayList<>();
+    public ArrayList<SplinePose> poses = new ArrayList<>();
     double[] xCoefficients = new double[4], yCoefficients = new double[4];
-    public Spline(Pose2d P0, double startingTheta, Pose2d P1, double endingTheta) {
-        this.P0 = P0;
-        this.P1 = P1;
-        double velo = Math.hypot(P0.getX()-P1.getX(), P0.getY()-P1.getY());
+    public double[] xPoints = new double[100], yPoints = new double[100];
+    /**
+     * @param startingPose starting position of the spline
+     */
+    public Spline(Pose2d startingPose) {
+        poses.add(new SplinePose(startingPose, 100.0, 1.0));
+    }
 
-        Translation2d lastPoint = P0.getTranslation();
+    public Spline addPoint(Pose2d pose, double maxPower) {
+        SplinePose lastPose = poses.get(poses.size() - 1);
 
-        xCoefficients[0] = P0.getX();
-        xCoefficients[1] = velo * cos(startingTheta);
-        xCoefficients[2] = 3*P1.getX()-3*xCoefficients[0]-2*xCoefficients[1]-velo*cos(endingTheta);
-        xCoefficients[3] = P1.getX() - xCoefficients[0] - xCoefficients[1] - xCoefficients[2];
+        double velo = Math.hypot(lastPose.x-pose.x, lastPose.x-pose.x);
 
-        yCoefficients[0] = P0.getY();
-        yCoefficients[1] = velo * sin(startingTheta);
-        yCoefficients[2] = 3*P1.getY()-3*yCoefficients[0]-2*yCoefficients[1]-velo*sin(endingTheta);
-        yCoefficients[3] = P1.getY() - yCoefficients[0] - yCoefficients[1] - yCoefficients[2];
+        xCoefficients[0] = lastPose.x;
+        xCoefficients[1] = velo * cos(lastPose.heading);
+        xCoefficients[2] = 3*pose.x-3* xCoefficients[0]-2* xCoefficients[1]-velo*cos(Math.toRadians(pose.heading));
+        xCoefficients[3] = pose.x - xCoefficients[0] - xCoefficients[1] - xCoefficients[2];
 
-        tValues.add(0.0);
+        yCoefficients[0] = lastPose.y;
+        yCoefficients[1] = velo * sin(Math.toRadians(lastPose.heading));
+        yCoefficients[2] = 3*pose.y-3* yCoefficients[0]-2* yCoefficients[1]-velo*sin(Math.toRadians(pose.heading));
+        yCoefficients[3] = pose.y - yCoefficients[0] - yCoefficients[1] - yCoefficients[2];
+
+        poses.add(lastPose);
+
+        Pose2d lastPoint = lastPose.clone();
 
         for (double time = 0.0; time < 1.0; time+=0.001) {
-            Translation2d point = getPathPosition(time);
-            if(lastPoint.getDistance(point) > 50.8) {
-                tValues.add(time);
+            Pose2d point = position(time);
+            if(lastPoint.getDistanceFromPoint(point) > 100) {
+                double[] v = velocity(time);
+                point.heading = atan2(v[1], v[0]);
+                poses.add(new SplinePose(point, findRadius(time), maxPower));
                 lastPoint = point;
             }
         }
 
-        tValues.add(1.0);
-    }
-    public Translation2d getPathPosition(double time) {
-        double x = xCoefficients[0] + xCoefficients[1]*time + xCoefficients[2]*time*time + xCoefficients[3]*time*time*time;
-        double y = yCoefficients[0] + yCoefficients[1]*time + yCoefficients[2]*time*time + yCoefficients[3]*time*time*time;
-        return new Translation2d(x, y);
+        poses.add(new SplinePose(pose, findRadius(1.0), maxPower));
+
+        int startingIndex = poses.size() - 1 == -1 ? 0 : poses.size() - 1;
+
+        for (int i = startingIndex; i < poses.size(); i++) {
+            Pose2d p = poses.get(i);
+            xPoints[i] = p.x / 25.4;
+            yPoints[i] = p.y / 25.4;
+        }
+
+        return this;
     }
 
-    public Vector2d getTangent(double time) {
-        double x = xCoefficients[1] + 2 * xCoefficients[2]*time + 3 * xCoefficients[3] * time * time;
-        double y = yCoefficients[1] + 2 * yCoefficients[2]*time + 3 * yCoefficients[3] * time * time;
-        return new Vector2d(x, y);
+    public Pose2d position(double time) {
+        double x = xCoefficients[0] + xCoefficients[1]*time + xCoefficients[2]*time*time + xCoefficients[3]*time*time*time;
+        double y = yCoefficients[0] + yCoefficients[1]*time + yCoefficients[2]*time*time + yCoefficients[3]*time*time*time;
+        return new Pose2d(x, y);
+    }
+
+    public double[] velocity(double time) {
+        double x = xCoefficients[1] + 2* xCoefficients[2]*time + 3 * xCoefficients[3]*time*time;
+        double y = yCoefficients[1] + 2* yCoefficients[2]*time + 3* yCoefficients[3]*time*time;
+        return new double[] {x, y};
+    }
+
+    public double[] accel(double time) {
+        double x = 2* xCoefficients[2] + 6* xCoefficients[3]*time;
+        double y = 2* yCoefficients[2] + 6* yCoefficients[3]*time;
+        return new double[] {x, y};
+    }
+
+    public double findRadius(double time){
+        double[] velocity = velocity(time);
+        double[] accel = accel(time);
+
+        if ((accel[1] * velocity[0] - accel[0] * velocity[1]) != 0) {
+            double r = Math.pow(velocity[0] * velocity[0] + velocity[1] * velocity[1], 1.5) / (accel[1] * velocity[0] - accel[0] * velocity[1]);
+            return Math.min(Math.abs(r),2540) * signum(r);
+        }
+        return 2540;
     }
 }

@@ -137,16 +137,5 @@ public class SampleAlignmentPipeline extends OpenCvPipeline {
          *
          * Here we demonstrate dynamically pausing/resuming the viewport when the user taps it
          */
-
-        viewportPaused = !viewportPaused;
-
-        if(viewportPaused)
-        {
-            robot.baseCam.pauseViewport();
-        }
-        else
-        {
-            robot.baseCam.resumeViewport();
-        }
     }
 }

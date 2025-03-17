@@ -13,7 +13,7 @@ public class ResetVerticalSlidesCommand extends SequentialCommandGroup {
                 new VerticalSlidesCommand(Outtake.SlideState.DEFAULT, false),
                 new ConditionalCommand(
                         new OuttakeArmCommand(Outtake.ArmState.SCORING_SPECIMEN),
-                        new OuttakeArmCommand(Outtake.ArmState.TRANSFERING),
+                        new OuttakeArmCommand(Outtake.ArmState.CHECKING),
                         () -> SpecimenScoringMode
                 )
         );

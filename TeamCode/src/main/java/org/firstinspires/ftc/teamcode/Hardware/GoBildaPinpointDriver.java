@@ -26,10 +26,6 @@ import static com.qualcomm.robotcore.util.TypeConversion.byteArrayToInt;
 
 import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.normalizeRadians;
 
-import com.arcrobotics.ftclib.geometry.Pose2d;
-import com.arcrobotics.ftclib.geometry.Rotation2d;
-import com.arcrobotics.ftclib.geometry.Translation2d;
-import com.arcrobotics.ftclib.geometry.Vector2d;
 import com.qualcomm.hardware.lynx.LynxI2cDeviceSynch;
 import com.qualcomm.robotcore.hardware.I2cAddr;
 import com.qualcomm.robotcore.hardware.I2cDeviceSynchDevice;
@@ -41,6 +37,7 @@ import com.qualcomm.robotcore.util.TypeConversion;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+import org.firstinspires.ftc.teamcode.Util.Pose2d;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -392,9 +389,9 @@ public class GoBildaPinpointDriver extends I2cDeviceSynchDevice<I2cDeviceSynchSi
      * @param pos a Pose2D describing the robot's new position.
      */
     public Pose2d setPosition(Pose2d pos){
-        writeByteArray(Register.X_POSITION,(floatToByteArray((float) pos.getX(), ByteOrder.LITTLE_ENDIAN)));
-        writeByteArray(Register.Y_POSITION,(floatToByteArray((float) pos.getY(),ByteOrder.LITTLE_ENDIAN)));
-        writeByteArray(Register.H_ORIENTATION,(floatToByteArray((float) pos.getHeading(),ByteOrder.LITTLE_ENDIAN)));
+        writeByteArray(Register.X_POSITION,(floatToByteArray((float) pos.x, ByteOrder.LITTLE_ENDIAN)));
+        writeByteArray(Register.Y_POSITION,(floatToByteArray((float) pos.y,ByteOrder.LITTLE_ENDIAN)));
+        writeByteArray(Register.H_ORIENTATION,(floatToByteArray((float) pos.heading,ByteOrder.LITTLE_ENDIAN)));
         return pos;
     }
 
@@ -501,9 +498,9 @@ public class GoBildaPinpointDriver extends I2cDeviceSynchDevice<I2cDeviceSynchSi
      */
     public Pose2d getPosition(){
         return new Pose2d(
-                -yPosition,
                 xPosition,
-                new Rotation2d(-hOrientation));
+                yPosition,
+                normalizeRadians(hOrientation));
     }
 
     /**
@@ -511,9 +508,9 @@ public class GoBildaPinpointDriver extends I2cDeviceSynchDevice<I2cDeviceSynchSi
      */
     public Pose2d getVelocity(){
         return new Pose2d(
-                -yVelocity,
                 xVelocity,
-                new Rotation2d(-hOrientation));
+                yVelocity,
+                hOrientation);
     }
 
 

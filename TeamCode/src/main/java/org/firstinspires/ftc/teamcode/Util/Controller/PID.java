@@ -17,8 +17,8 @@ public class PID {
         stamp = System.currentTimeMillis();
     }
 
-    public double update(double state, double target) {
-        p = target - state;
+    public double update(double error, double maxPower) {
+        p = error;
 
         if (reiniting) {
             reiniting = false;
@@ -32,7 +32,7 @@ public class PID {
         d = (p - pErr) / dt;
 
         power = p * kp + i + d * kd;
-        power = clip(power, -1, 1);
+        power = clip(power, -maxPower, maxPower);
 
         pErr = p;
         stamp = System.currentTimeMillis();
