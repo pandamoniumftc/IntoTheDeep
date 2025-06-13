@@ -33,10 +33,8 @@ public class PandaHub {
 
     private HashMap<Integer, PandaMotor> motors;
     private HashMap<Integer, PandaServo> servos;
-    private HashMap<Integer, PandaDigital> digital;
-    private HashMap<Integer, PandaAnalog> analog;
-    public int numOfMotor = 0, numOfServo = 0;
-    double voltage = 12.0;
+    private HashMap<Integer, DigitalChannel> digital;
+    private HashMap<Integer, AnalogInput> analog;
     public PandaHub(HardwareMap hardwareMap, LynxModule module) {
         this.module = module;
 
@@ -55,25 +53,23 @@ public class PandaHub {
         analog = new HashMap<>();
 
         for (DcMotor motor : hardwareMap.getAll(DcMotor.class)) {
-            numOfMotor += 1;
             if (motor.getController().getConnectionInfo().equals(module.getConnectionInfo())) {
                 motors.put(motor.getPortNumber(), new PandaMotor(motor));
             }
         }
         for (Servo servo : hardwareMap.getAll(Servo.class)) {
-            numOfServo += 1;
             if (servo.getController().getConnectionInfo().equals(module.getConnectionInfo())) {
                 servos.put(servo.getPortNumber(), new PandaServo(servo));
             }
         }
         for (AnalogInput analogInput : hardwareMap.getAll(AnalogInput.class)) {
             if (analogInput.getConnectionInfo().split(";")[0].equals(module.getConnectionInfo())) {
-                analog.put(Integer.valueOf(analogInput.getConnectionInfo().split(";")[1].replace(" analog port ", "")), new PandaAnalog(analogInput));
+                analog.put(Integer.valueOf(analogInput.getConnectionInfo().split(";")[1].replace(" analog port ", "")), analogInput);
             }
         }
         for(DigitalChannel digitalChannel : hardwareMap.getAll(DigitalChannel.class)){
             if(digitalChannel.getConnectionInfo().split(";")[0].equals(module.getConnectionInfo())){
-                digital.put(Integer.valueOf(digitalChannel.getConnectionInfo().split(";")[1].replace(" digital port ", "")), new PandaDigital(digitalChannel));
+                digital.put(Integer.valueOf(digitalChannel.getConnectionInfo().split(";")[1].replace(" digital port ", "")), digitalChannel);
             }
         }
     }
@@ -89,15 +85,15 @@ public class PandaHub {
         }
         return servos.get(port);
     }
-    public PandaAnalog getAnalog(int port) {
+    public AnalogInput getAnalog(int port) {
         if(!analog.containsKey(port)){
-            analog.put(port, new PandaAnalog(new AnalogInput(analogInputController, port)));
+            analog.put(port, new AnalogInput(analogInputController, port));
         }
         return analog.get(port);
     }
-    public PandaDigital getDigital(int port) {
+    public DigitalChannel getDigital(int port) {
         if(!digital.containsKey(port)){
-            digital.put(port, new PandaDigital(new DigitalChannelImpl(digitalChannelController, port)));
+            digital.put(port, new DigitalChannelImpl(digitalChannelController, port));
         }
         return digital.get(port);
     }

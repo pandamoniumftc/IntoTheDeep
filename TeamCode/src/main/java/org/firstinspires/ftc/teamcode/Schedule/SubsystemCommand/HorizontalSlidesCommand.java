@@ -14,7 +14,7 @@ public class HorizontalSlidesCommand extends SequentialCommandGroup {
     public HorizontalSlidesCommand(Intake.SlideState state, boolean wait) {
         super(
                 new InstantCommand(() -> PandaRobot.getInstance().intake.updateSlideState(state)),
-                new WaitUntilCommand(() -> !wait || (state != Intake.SlideState.TRANSFERRING ? PandaRobot.getInstance().horizontalSlideActuator.isFinished() : PandaRobot.getInstance().outtakeClawSensor.getDistance(DistanceUnit.MM) < 100.0))
+                new WaitUntilCommand(() -> !wait || (state != Intake.SlideState.TRANSFERRING ? PandaRobot.getInstance().horizontalSlideActuator.isFinished() : PandaRobot.getInstance().outtakeClawSensor.getDistance(DistanceUnit.MM) < 50.0))
         );
     }
 }

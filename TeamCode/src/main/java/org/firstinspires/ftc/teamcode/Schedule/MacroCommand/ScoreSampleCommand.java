@@ -10,8 +10,8 @@ public class ScoreSampleCommand extends SequentialCommandGroup {
     public ScoreSampleCommand() {
         super(
                 new OuttakeClawCommand(Outtake.ClawState.OPENED),
-                new WaitCommand(500),
-                new ResetVerticalSlidesCommand(false)
+                new WaitCommand(100),
+                new ResetVerticalSlidesCommand()
         );
     }
 }

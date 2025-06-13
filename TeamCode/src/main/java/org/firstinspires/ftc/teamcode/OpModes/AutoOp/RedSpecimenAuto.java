@@ -3,10 +3,6 @@ package org.firstinspires.ftc.teamcode.OpModes.AutoOp;
 import com.arcrobotics.ftclib.command.CommandScheduler;
 import com.arcrobotics.ftclib.command.SequentialCommandGroup;
 import com.arcrobotics.ftclib.command.WaitCommand;
-import com.arcrobotics.ftclib.command.WaitUntilCommand;
-import com.arcrobotics.ftclib.geometry.Pose2d;
-import com.arcrobotics.ftclib.geometry.Rotation2d;
-import com.arcrobotics.ftclib.geometry.Translation2d;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -17,20 +13,17 @@ import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.CycleSpecimenCommand
 import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ParkObservationZone;
 import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.PushSampleIntoZoneCommand;
 import org.firstinspires.ftc.teamcode.Schedule.AutoCommands.ScoreSpecimenPreloadRightSideCommand;
-import org.firstinspires.ftc.teamcode.Schedule.DriveCommand.PositionCommand;
-import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.HorizontalSlidesCommand;
-import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeArmCommand;
-import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.IntakeClawCommand;
-import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeArmCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeClawCommand;
-import org.firstinspires.ftc.teamcode.Subsystem.Intake;
 import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
+import org.firstinspires.ftc.teamcode.Util.Pose2d;
+
+import java.util.concurrent.TimeUnit;
 
 @Autonomous(name = "red specimen auto")
 public class RedSpecimenAuto extends LinearOpMode {
     private final PandaRobot robot = PandaRobot.getInstance();
     private final ElapsedTime timer = new ElapsedTime();
-    private double loopTime = 0.0;
+    ScoreSpecimenPreloadRightSideCommand preload = new ScoreSpecimenPreloadRightSideCommand();
     PushSampleIntoZoneCommand push = new PushSampleIntoZoneCommand();
     CycleSpecimenCommand firstSpec = new CycleSpecimenCommand(1);
     CycleSpecimenCommand secondSpec = new CycleSpecimenCommand(2);
@@ -39,6 +32,7 @@ public class RedSpecimenAuto extends LinearOpMode {
     ParkObservationZone zone = new ParkObservationZone();
 
     private enum State {
+        PRELOAD,
         PUSH,
         FIRST_SPEC,
         SECOND_SPEC,
@@ -47,22 +41,25 @@ public class RedSpecimenAuto extends LinearOpMode {
         PARK,
         FINISHED
     }
-    State state = State.PUSH;
+    State state = State.PRELOAD;
     @Override
     public void runOpMode() throws InterruptedException {
         CommandScheduler.getInstance().reset();
         Globals.opMode = Globals.RobotOpMode.AUTO;
         Globals.alliance = Globals.RobotAlliance.RED;
+        Globals.targetingColorPiece = true;
 
         robot.initialize(hardwareMap);
 
-        robot.odometry.resetPosAndIMU();
+        robot.odometry.setPosition(new Pose2d(0, 0, Math.toRadians(0)));
 
-        robot.read();
         robot.horizontalSlideActuator.setInitialPosition();
         robot.verticalSlidesActuator.setInitialPosition();
 
         robot.reset(false);
+
+        CommandScheduler.getInstance().schedule(new SequentialCommandGroup(new WaitCommand(3000),
+                new OuttakeClawCommand(Outtake.ClawState.CLOSED)));
 
         while (opModeInInit()) {
             robot.update();
@@ -70,7 +67,7 @@ public class RedSpecimenAuto extends LinearOpMode {
             telemetry.update();
         }
 
-        CommandScheduler.getInstance().schedule(push);
+        CommandScheduler.getInstance().schedule(preload);
 
         timer.reset();
 
@@ -78,6 +75,12 @@ public class RedSpecimenAuto extends LinearOpMode {
             robot.update();
 
             switch(state) {
+                case PRELOAD:
+                    if (!CommandScheduler.getInstance().isScheduled(preload)) {
+                        CommandScheduler.getInstance().schedule(push);
+                        state = State.PUSH;
+                    }
+                    break;
                 case PUSH:
                     if (!CommandScheduler.getInstance().isScheduled(push)) {
                         CommandScheduler.getInstance().schedule(firstSpec);
@@ -91,10 +94,10 @@ public class RedSpecimenAuto extends LinearOpMode {
                     }
                     break;
                 case SECOND_SPEC:
-                    if (!CommandScheduler.getInstance().isScheduled(secondSpec)) {
+                    /*if (!CommandScheduler.getInstance().isScheduled(secondSpec)) {
                         CommandScheduler.getInstance().schedule(thirdSpec);
                         state = State.THIRD_SPEC;
-                    }
+                    }*/
                     break;
                 case THIRD_SPEC:
                     if (!CommandScheduler.getInstance().isScheduled(thirdSpec)) {
@@ -107,19 +110,12 @@ public class RedSpecimenAuto extends LinearOpMode {
                         state = State.FINISHED;
                     }
                 case FINISHED:
-                    Globals.pose = robot.drive.currentPosition;
                     break;
             }
 
-
-            double loop = System.nanoTime();
-            telemetry.addData("state ", state);
-            telemetry.addData("hz ", 1000000000 / (loop - loopTime));
-            telemetry.addLine(robot.odometry.getPosition().toString());
-            telemetry.addData("Runtime: ", timer.seconds());
+            telemetry.addData("ACTION ", state.toString());
+            telemetry.addData("RUNTIME: ", timer.time(TimeUnit.MILLISECONDS)/1000.0);
             telemetry.update();
-
-            loopTime = loop;
         }
     }
 }

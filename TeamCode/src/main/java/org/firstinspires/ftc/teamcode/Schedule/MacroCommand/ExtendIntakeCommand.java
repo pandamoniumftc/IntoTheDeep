@@ -16,11 +16,10 @@ import org.firstinspires.ftc.teamcode.Subsystem.Outtake;
 public class ExtendIntakeCommand extends SequentialCommandGroup {
     public ExtendIntakeCommand() {
         super(
-                new IntakeClawCommand(Intake.ClawState.CLOSED),
-                new OuttakeArmCommand(Outtake.ArmState.CHECKING),
-                new OuttakeClawCommand(Outtake.ClawState.OPENED),
-                new HorizontalSlidesCommand(Intake.SlideState.GRABBING_SAMPLE, true),
-                new IntakeArmCommand(Intake.ArmState.SCANNING)
+                new IntakeClawCommand(Intake.ClawState.OPENED),
+                new IntakeArmCommand(Intake.ArmState.SCANNING),
+                new HorizontalSlidesCommand(Intake.SlideState.GRABBING_SAMPLE, true)
+
         );
     }
 }

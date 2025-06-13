@@ -3,14 +3,11 @@ package org.firstinspires.ftc.teamcode.Hardware;
 import static com.qualcomm.robotcore.util.Range.clip;
 import static java.lang.Math.abs;
 
-import com.outoftheboxrobotics.photoncore.hardware.motor.PhotonAdvancedDcMotor;
-import com.outoftheboxrobotics.photoncore.hardware.motor.PhotonDcMotor;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Util.MotionProfile;
-import org.firstinspires.ftc.teamcode.Util.Controller.MotorPID;
+import org.firstinspires.ftc.teamcode.Util.PID;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -19,11 +16,10 @@ public class PandaMotorActuator {
     private PandaRobot robot;
     private PandaMotor[] devices;
     private final Sensors type;
-    private MotorPID controller;
+    private PID controller;
     private MotionProfile profile;
     public double power, profileOutput;
-    private double initial, velocity = 0.0, position = 0.0, lowerLimit = 0.0, upperLimit = 1.0, tolerance, target, threshold;
-    public boolean reached, stalled;
+    private double velocity = 0.0, position = 0.0, lowerLimit = 0.0, upperLimit = 1.0, tolerance, target;
     private double feedback = 0.0;
     private int sign;
     ElapsedTime profileTimer;
@@ -35,30 +31,18 @@ public class PandaMotorActuator {
         profileTimer = new ElapsedTime();
     }
 
-    public void read() {
+    public void update() {
         position = Objects.requireNonNull(robot.sensorValues.get(type))[0] * sign;
         velocity = Objects.requireNonNull(robot.sensorValues.get(type))[1] * sign;
-    }
+        if (controller != null) {
+            double pos = target;
 
-    public void loop() {
-        if (controller != null && profile != null) {
-            profileOutput = profile.calculate(profileTimer.time(TimeUnit.NANOSECONDS) / 1E9);
-
-            power = controller.update(getPosition(), profileOutput) + feedback;
-
-            power = clip(power, -1, 1);
-
-            for (PandaMotor motor : devices) {
-                if (!motor.isStalled(threshold)) {
-                    stalled = false;
-                    break;
-                }
-                stalled = true;
+            if (profile != null) {
+                pos = profile.calculate(profileTimer.time(TimeUnit.NANOSECONDS) / 1E9);
             }
-        }
-    }
-    public void write() {
-        if (profile != null && controller != null) {
+
+            power = controller.update(pos - getPosition(), 1) + feedback;
+
             for (PandaMotor motor : devices) motor.write(power);
         }
     }
@@ -72,8 +56,10 @@ public class PandaMotorActuator {
         if (profile != null) {
             this.profile = new MotionProfile(getPosition(), target, this.profile.vMax, this.profile.aMax);
             profileTimer.reset();
-            reached = false;
         }
+    }
+    public double getTargetPosition() {
+        return target;
     }
     public void setInitialPosition() {
         for (PandaMotor motor : devices) {
@@ -88,7 +74,7 @@ public class PandaMotorActuator {
         return velocity;
     }
     public PandaMotorActuator setPIDController(double kp, double ki, double kd) {
-        this.controller = new MotorPID(kp, ki, kd);
+        this.controller = new PID(kp, ki, kd);
         return this;
     }
     public PandaMotorActuator setMotionProfile(double velocity, double acceleration) {
@@ -102,10 +88,6 @@ public class PandaMotorActuator {
         this.tolerance = tolerance;
         return this;
     }
-    public PandaMotorActuator setPowerThreshold(double threshold) {
-        this.threshold = threshold;
-        return this;
-    }
     public PandaMotorActuator setLimits(double lower, double upper) {
         lowerLimit = lower;
         upperLimit = upper;
@@ -116,6 +98,6 @@ public class PandaMotorActuator {
         return this;
     }
     public boolean isFinished() {
-        return (abs(target - getPosition()) <= tolerance) && (controller == null || profile == null || stalled);
+        return abs(target - getPosition()) <= tolerance;
     }
 }

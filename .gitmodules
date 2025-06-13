@@ -1,0 +1,3 @@
+[submodule "PedroPathing"]
+	path = PedroPathing
+	url = https://github.com/Pedro-Pathing/PedroPathing

@@ -4,46 +4,46 @@ import static com.qualcomm.robotcore.util.Range.clip;
 import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.normalizeRadians;
 
 import com.arcrobotics.ftclib.command.CommandBase;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Hardware.PandaRobot;
 import org.firstinspires.ftc.teamcode.Subsystem.Mecanum;
-import org.firstinspires.ftc.teamcode.Util.Controller.PID;
-import org.firstinspires.ftc.teamcode.Util.Pose2d;
-import org.firstinspires.ftc.teamcode.Util.Spline;
+import org.firstinspires.ftc.teamcode.Util.Waypoint;
 
 import static java.lang.Math.abs;
 import static java.lang.Math.max;
 
+import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
+
 public class SplineCommand extends CommandBase {
     PandaRobot robot;
-    public Pose2d robotPose;
-    double[] MAX_POWER;
-    public Pose2d[] poses;
-    public Spline path;
-    public SplineCommand(Pose2d[] poses, double[] maxPower) {
+    public ArrayList<Waypoint> path;
+    ElapsedTime timer;
+    double time;
+    public SplineCommand(ArrayList<Waypoint> path) {
         this.robot = PandaRobot.getInstance();
-        this.poses = poses;
-        this.MAX_POWER = maxPower;
+        this.path = path;
+        timer = new ElapsedTime();
     }
 
     @Override
     public void initialize() {
-        robotPose = robot.odometry.getPosition();
-        path = new Spline(robotPose);
-        for (int i = 0; i < poses.length; i++) {
-            path.addPoint(poses[i], MAX_POWER[i]);
-        }
-        robot.drive.followSpline(path);
+        robot.drive.followPath(path);
+        this.timer.reset();
     }
 
     @Override
     public void execute() {
-
+        if (robot.drive.state != Mecanum.DriveState.MOVING_TO_TARGET_POSITION) {
+            this.timer.reset();
+        }
+        time = timer.time(TimeUnit.MILLISECONDS) / 1000.0;
     }
 
     @Override
     public boolean isFinished() {
-        return robot.drive.state == Mecanum.DriveState.GO_TO_POSITION && robot.drive.reachedPosition();
+        return path.get(path.size()-1).position.getDistanceFromPoint(robot.drive.currentPosition) < 100 && (robot.drive.reachedPosition() || time > 2.0);
     }
 
     @Override

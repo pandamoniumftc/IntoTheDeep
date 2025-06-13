@@ -5,7 +5,8 @@ import com.arcrobotics.ftclib.command.SequentialCommandGroup;
 import com.arcrobotics.ftclib.command.WaitCommand;
 
 import org.firstinspires.ftc.teamcode.Schedule.DriveCommand.PositionCommand;
-import org.firstinspires.ftc.teamcode.Schedule.DriveCommand.SplineCommand;
+import org.firstinspires.ftc.teamcode.Schedule.MacroCommand.ExtendIntakeCommand;
+import org.firstinspires.ftc.teamcode.Schedule.MacroCommand.HighBasketCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeArmCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.OuttakeClawCommand;
 import org.firstinspires.ftc.teamcode.Schedule.SubsystemCommand.VerticalSlidesCommand;
@@ -15,11 +16,18 @@ import org.firstinspires.ftc.teamcode.Util.Pose2d;
 public class GoToBasketCommand extends SequentialCommandGroup {
     public GoToBasketCommand() {
         super(
-                new PositionCommand(new Pose2d(189, 433, Math.toRadians(135)), 0.6).alongWith(new VerticalSlidesCommand(Outtake.SlideState.HIGH_BASKET, true)),
-                new OuttakeArmCommand(Outtake.ArmState.SCORING_SAMPLE),
-                new WaitCommand(500),
+                new PositionCommand(new Pose2d(0, 300, Math.toRadians(90)), 1)
+                        .alongWith(
+                                new ParallelCommandGroup(
+                                        new HighBasketCommand(),
+                                        new SequentialCommandGroup(
+                                                new WaitCommand(1000),
+                                                new ExtendIntakeCommand()
+                                        )
+                                )
+                        ),
                 new OuttakeClawCommand(Outtake.ClawState.OPENED),
-                new WaitCommand(250)
+                new WaitCommand(100)
         );
     }
 }

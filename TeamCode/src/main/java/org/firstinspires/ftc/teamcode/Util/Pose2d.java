@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode.Util;
 
 import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.normalizeRadians;
 
+import android.annotation.SuppressLint;
+
 import androidx.annotation.NonNull;
 
 public class Pose2d implements Cloneable {
@@ -27,8 +29,9 @@ public class Pose2d implements Cloneable {
         return new Pose2d(x, y, heading);
     }
 
+    @SuppressLint("DefaultLocale")
     @NonNull
     public String toString() {
-        return "X: " + x + ", Y: " + y + ", H: " + heading;
+        return String.format("X: %.2f, Y: %.2f, H: %.2f", x, y, heading);
     }
 }

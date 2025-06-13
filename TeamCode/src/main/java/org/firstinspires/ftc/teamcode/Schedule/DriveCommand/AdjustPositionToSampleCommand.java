@@ -32,7 +32,7 @@ public class AdjustPositionToSampleCommand extends CommandBase {
 
     @Override
     public boolean isFinished() {
-        return (robot.drive.reachedPosition() && (time > 0.5)) || time > 2.0;
+        return (robot.intake.slideAdjusted() && robot.drive.reachedPosition()) || time > 2.0;
     }
 
     @Override
